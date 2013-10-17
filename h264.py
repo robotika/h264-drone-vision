@@ -59,6 +59,48 @@ class BitStream:
 
     return None
 
+class VerboseWrapper:
+  def __init__( self, worker, startOffset=-40 ):
+    self.worker = worker
+    self.startOffset = startOffset
+
+  def printInfo( self, s ):
+    print "\ntrace: @%d" % (self.startOffset + self.worker.index), s
+
+  def binStr( self, num, places ):
+    # ignore '0b' and fill zeros
+    return ('0'*places+bin( num )[2:])[-places:]
+
+  def bit( self ):
+    ret = self.worker.bit()
+    self.printInfo( "bit %d" % ret )
+    return ret
+
+  def bits( self, howMany ):
+    ret = self.worker.bits( howMany )
+    self.printInfo( ("bits(%d) " % howMany) + self.binStr( ret, howMany ) )
+    return ret
+
+  def golomb( self ):
+    before = self.worker.index
+    ret = self.worker.golomb()
+    howMany = self.worker.index - before
+    self.printInfo( "golomb(%d)  " % howMany + self.binStr(ret, howMany) )
+    return ret
+
+  def alignedByte( self ):
+    ret = self.worker.alignedByte()
+    self.printInfo( "alignedByte " + self.binStr( ret, 8 ) )
+    return ret
+
+  def tab( self, table, maxBits=32 ):
+    before = self.worker.index
+    ret = self.worker.tab( table, maxBits )
+    howMany = self.worker.index - before
+    self.printInfo( "tab " + self.binStr( ret, howMany ) )
+    return ret
+
+
 def parseISlice( bs ):
 #  assert ord(f.read(1)) == 0xE0 # set012 flags and reserved zero 5bits
   print [hex(bs.alignedByte()) for i in xrange(5)]
@@ -121,7 +163,6 @@ def residual( bs ):
   print "residual uknown", bs.golomb()
   # TotalCoef and TrailingOnes (page 177)
   coefTokenMapping = { '01' : (1,1) } # 0 <= nC < 2
-  print "BS:", bs.index-40
   totalCoeff, trailing1s = bs.tab( coefTokenMapping )
   print "total %d, trailing1s %d" % (totalCoeff, trailing1s)
   for i in xrange(totalCoeff):
@@ -131,12 +172,10 @@ def residual( bs ):
       levelMapping = { '1':0, '01':1, '001':2 } # TODO
       levelPrefix = bs.tab( levelMapping,  maxBits=15 )
       print "levelPrefix", levelPrefix, "suffix", bs.bits(levelPrefix)
-  print "BS:", bs.index-40
   totalZerosMapping = {}
   totalZerosMapping[1] = { '1':0, '011':1, '010':2, '0011':3, '0010':4, '00011':5} # TODO
   totalZeros = bs.tab( totalZerosMapping[totalCoeff] )
   print "totalZeros", totalZeros
-  print "BS:", bs.index-40
   runBeforeMapping = {}
   runBeforeMapping[1] = { '1':0, '0': 1 }
   runBeforeMapping[2] = { '1':0, '01': 1, '00':2 }
@@ -151,13 +190,10 @@ def residual( bs ):
     if zerosLeft == 0:
       break
   print "residual uknownEnd", bs.golomb()
-  print "BS:", bs.index-40
-
 
 
 def macroblockLayer( bs ):
   print "macroblockLayer" # page 59
-  print "==BS:", bs.index-40
   print "  mb_type", bs.golomb() # for P-slice, Table 7-10, page 91
   # md_type, name, NumMbPart, MbPartPredMode
   # 0 P_L0_16x16 1 Pred_L0 na 16 16
@@ -168,9 +204,7 @@ def macroblockLayer( bs ):
 #  print "  ref_idx_l1", bs.golomb()
   print "  mvd_l0", bs.golomb()
 #  print "  mvd_l1", bs.golomb()
-  print "BS:", bs.index-40
   print "CBP  coded_block_pattern", bs.golomb()  #         cbp= get_ue_golomb(&h->gb);
-  print "BS:", bs.index-40
   print "dquant= get_se_golomb(&h->gb);", bs.golomb()
 
   residual( bs )
@@ -179,13 +213,10 @@ def macroblockLayer( bs ):
 
 def parsePSlice( bs ):
   print "P-slice"
-  print "BS:", bs.index-40
   print "first_mb_in_slice", bs.golomb()
   print "slice_type", bs.golomb()
   print "pic_parameter_set_id", bs.golomb()
-  print "BS:", bs.index-40
   print "frame_num", bs.bits(14) # HACK! should use parameter from SPS
-  print "BS:", bs.index-40
 # redundant_pic_cnt_present_flag: 0 (PPS)
   print "num_ref_idx_active_override_flag", bs.bit()
   print "h->ref_count[0]", bs.golomb()+1
@@ -194,9 +225,7 @@ def parsePSlice( bs ):
 # nal_ref_idc = 3
   print "adaptive_ref_pic_marking_mode_flag", bs.bit()
 # entropy_coding_mode_flag: 0
-  print "BS:", bs.index-40
   print "slice_qp_delta", bs.golomb()
-  print "BS:", bs.index-40
 # deblocking_filter_control_present_flag: 1
   if True:
     print "disable_deblocking_filter_idc", bs.golomb()
@@ -213,7 +242,7 @@ def parsePSlice( bs ):
 
 
 def parseFrame( filename ):
-  bs = BitStream( open(filename, "rb").read() )
+  bs = VerboseWrapper( BitStream( open(filename, "rb").read() ) )
   header = [None, None, None, None]
   while True:  
     try:
