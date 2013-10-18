@@ -60,44 +60,47 @@ class BitStream:
     return None
 
 class VerboseWrapper:
-  def __init__( self, worker, startOffset=-40 ):
+  def __init__( self, worker, startOffset=1075083-40 ):
     self.worker = worker
     self.startOffset = startOffset
 
-  def printInfo( self, s ):
-    print "\ntrace: @%d" % (self.startOffset + self.worker.index), s
+  def printInfo( self, addr, s ):
+    print "\ntrace: @%d" % (self.startOffset + addr), s
 
   def binStr( self, num, places ):
     # ignore '0b' and fill zeros
     return ('0'*places+bin( num )[2:])[-places:]
 
   def bit( self ):
+    addr = self.worker.index
     ret = self.worker.bit()
-    self.printInfo( "bit %d" % ret )
+    self.printInfo( addr, "bit %d" % ret )
     return ret
 
   def bits( self, howMany ):
+    addr = self.worker.index
     ret = self.worker.bits( howMany )
-    self.printInfo( ("bits(%d) " % howMany) + self.binStr( ret, howMany ) )
+    self.printInfo( addr, ("bits(%d) " % howMany) + self.binStr( ret, howMany ) )
     return ret
 
   def golomb( self ):
-    before = self.worker.index
+    addr = self.worker.index
     ret = self.worker.golomb()
-    howMany = self.worker.index - before
-    self.printInfo( "golomb(%d)  " % howMany + self.binStr(ret, howMany) )
+    howMany = self.worker.index - addr
+    self.printInfo( addr, "golomb(%d) val=%d " % (howMany, ret) )
     return ret
 
   def alignedByte( self ):
+    addr = self.worker.index
     ret = self.worker.alignedByte()
-    self.printInfo( "alignedByte " + self.binStr( ret, 8 ) )
+    self.printInfo( addr, "alignedByte " + self.binStr( ret, 8 ) )
     return ret
 
   def tab( self, table, maxBits=32 ):
-    before = self.worker.index
+    addr = self.worker.index
     ret = self.worker.tab( table, maxBits )
-    howMany = self.worker.index - before
-    self.printInfo( "tab " + self.binStr( ret, howMany ) )
+    howMany = self.worker.index - addr
+    self.printInfo( addr, "tab(%d) " % howMany + str( ret ) )
     return ret
 
 
@@ -152,17 +155,10 @@ def parsePPS( bs ):
 def residual( bs ):
   "read residual block/data"
   # page 63, 7.4.5.3.1 Residual block CAVLC syntax
-  # L40 T0 n8 s28 P0 
 
-#  for i in xrange(21):
-#    print bs.bit(),
-#  print
-#  print "BS:", bs.index-40
-#  return
-
-  print "residual uknown", bs.golomb()
+  print "-residual-"
   # TotalCoef and TrailingOnes (page 177)
-  coefTokenMapping = { '01' : (1,1) } # 0 <= nC < 2
+  coefTokenMapping = { '1':(0,0), '01' : (1,1), '001':(2,2) } # 0 <= nC < 2
   totalCoeff, trailing1s = bs.tab( coefTokenMapping )
   print "total %d, trailing1s %d" % (totalCoeff, trailing1s)
   for i in xrange(totalCoeff):
@@ -172,16 +168,23 @@ def residual( bs ):
       levelMapping = { '1':0, '01':1, '001':2 } # TODO
       levelPrefix = bs.tab( levelMapping,  maxBits=15 )
       print "levelPrefix", levelPrefix, "suffix", bs.bits(levelPrefix)
+  if totalCoeff == 0:
+    return
   totalZerosMapping = {}
-  totalZerosMapping[1] = { '1':0, '011':1, '010':2, '0011':3, '0010':4, '00011':5} # TODO
+  totalZerosMapping[1] = { '1':0, '011':1, '010':2, '0011':3, '0010':4, '00011':5} # TODO page 181
+  totalZerosMapping[2] = { '111':0, '110':1, '101':2, '110':3, '011':4, '0101':5, '0100':6, 
+      '0011':7, '0010':8, '00011':9, '00010':10, '000011':11, '000010':12, '000001':13, '000000':14}
   totalZeros = bs.tab( totalZerosMapping[totalCoeff] )
   print "totalZeros", totalZeros
-  runBeforeMapping = {}
+  runBeforeMapping = {} # Table 9-10, page 182
   runBeforeMapping[1] = { '1':0, '0': 1 }
   runBeforeMapping[2] = { '1':0, '01': 1, '00':2 }
-  runBeforeMapping[3] = { '11':0, '10': 1 } # TODO
-  runBeforeMapping[4] = { '11':0, '10': 1 } # TODO
-  runBeforeMapping[5] = { '11':0, '10': 1 } # TODO
+  runBeforeMapping[3] = { '11':0, '10': 1, '01':2, '00':3 }
+  runBeforeMapping[4] = { '11':0, '10': 1, '01':2, '001':3, '001':4 }
+  runBeforeMapping[5] = { '11':0, '10': 1, '011':2, '010':3, '001':4, '000':5 } 
+  runBeforeMapping[6] = { '11':0, '000': 1, '001':2, '011':3, '010':4, '100':5, '100':6 }
+  runBeforeMapping[7] = { '111':0, '110': 1, '101':2, '100':3, '011':4, '010':5, '001':6, '0001':7,
+      '00001':8, '000001':9, '0000001':10, '00000001':11, '000000001':12, '0000000001':13, '00000000001':14}
   zerosLeft = totalZeros
   for i in xrange( totalCoeff-1 ):
     runBefore = bs.tab( runBeforeMapping[zerosLeft] )
@@ -189,10 +192,10 @@ def residual( bs ):
     zerosLeft -= runBefore
     if zerosLeft == 0:
       break
-  print "residual uknownEnd", bs.golomb()
 
 
 def macroblockLayer( bs ):
+  print "=============================="
   print "macroblockLayer" # page 59
   print "  mb_type", bs.golomb() # for P-slice, Table 7-10, page 91
   # md_type, name, NumMbPart, MbPartPredMode
@@ -200,16 +203,18 @@ def macroblockLayer( bs ):
   # P_L0_16x16: the samples of the macroblock are predicted with one luma macroblock partition of size 16x16 luma
   # samples and associated chroma samples.
   # mb_pred( mb_type )
-  print "  ref_idx_l0", bs.golomb()  # MbPartPredMode( mb_type, mbPartIdx ) != Pred_L1
+#  print "  ref_idx_l0", bs.golomb()  # MbPartPredMode( mb_type, mbPartIdx ) != Pred_L1
 #  print "  ref_idx_l1", bs.golomb()
   print "  mvd_l0", bs.golomb()
-#  print "  mvd_l1", bs.golomb()
-  print "CBP  coded_block_pattern", bs.golomb()  #         cbp= get_ue_golomb(&h->gb);
-  print "dquant= get_se_golomb(&h->gb);", bs.golomb()
+  print "  mvd_l1", bs.golomb()
+  cbp = bs.golomb()
+  print "CBP  coded_block_pattern", cbp  #         cbp= get_ue_golomb(&h->gb);
+  print "mb_qp_delta", bs.golomb()
 
-  residual( bs )
-  residual( bs ) # chroma?
-  print "residual uknownEnd2", bs.bits(3)
+  cbpTab = {2:4}
+  for i in xrange(cbpTab[cbp]):
+    residual( bs )
+
 
 def parsePSlice( bs ):
   print "P-slice"
@@ -233,10 +238,11 @@ def parsePSlice( bs ):
       print "slice_alpha_c0_offset_div2", bs.golomb()
       print "slice_beta_offset_div2", bs.golomb()
 # num_slice_groups_minus1: 0
+  print "-------------------------"
 
   # SLICE DATA
-  print "mb_skip_flag", bs.golomb() # 0 -> MoreData=True
   for i in xrange(2):
+    print "mb_skip_flag", bs.golomb() # 0 -> MoreData=True
     macroblockLayer( bs )
 
 
