@@ -152,13 +152,21 @@ def parsePPS( bs ):
   pps = [bs.alignedByte() for i in xrange(5)]
   assert pps == [0xce, 0x1, 0xa8, 0x77, 0x20], pps
 
-def residual( bs ):
+def residual( bs, nC ):
   "read residual block/data"
   # page 63, 7.4.5.3.1 Residual block CAVLC syntax
 
-  print "-residual-"
+  print "-residual .. nC = %d" % nC
   # TotalCoef and TrailingOnes (page 177)
-  coefTokenMapping = { '1':(0,0), '01' : (1,1), '001':(2,2) } # 0 <= nC < 2
+  if nC in [0,1]:
+    coefTokenMapping = { '1':(0,0), '01' : (1,1), '001':(2,2), '00011':(3,3) } # 0 <= nC < 2 # TODO
+  elif nC in [2,3]:
+    coefTokenMapping = { '11':(0,0) } # 2 <= nC < 4 # TODO
+  elif nC == -1:
+    coefTokenMapping = { '01':(0,0), '1':(1,1) } # nC == -1
+  else:
+    assert False, "UNSUPORTED nC=%d" % nC
+
   totalCoeff, trailing1s = bs.tab( coefTokenMapping )
   print "total %d, trailing1s %d" % (totalCoeff, trailing1s)
   for i in xrange(totalCoeff):
@@ -169,11 +177,13 @@ def residual( bs ):
       levelPrefix = bs.tab( levelMapping,  maxBits=15 )
       print "levelPrefix", levelPrefix, "suffix", bs.bits(levelPrefix)
   if totalCoeff == 0:
-    return
+    return totalCoeff
   totalZerosMapping = {}
   totalZerosMapping[1] = { '1':0, '011':1, '010':2, '0011':3, '0010':4, '00011':5} # TODO page 181
   totalZerosMapping[2] = { '111':0, '110':1, '101':2, '110':3, '011':4, '0101':5, '0100':6, 
       '0011':7, '0010':8, '00011':9, '00010':10, '000011':11, '000010':12, '000001':13, '000000':14}
+  totalZerosMapping[3] = { '0101':0, '111':1, '110':2, '101':3, '0100':4, '0011':5, '100':6,
+      '011':7, '0010':8, '00011':9, '00010':10, '000001':11, '00001':12, '000000':13 }
   totalZeros = bs.tab( totalZerosMapping[totalCoeff] )
   print "totalZeros", totalZeros
   runBeforeMapping = {} # Table 9-10, page 182
@@ -187,15 +197,17 @@ def residual( bs ):
       '00001':8, '000001':9, '0000001':10, '00000001':11, '000000001':12, '0000000001':13, '00000000001':14}
   zerosLeft = totalZeros
   for i in xrange( totalCoeff-1 ):
-    runBefore = bs.tab( runBeforeMapping[zerosLeft] )
+    if zerosLeft < 7:
+      runBefore = bs.tab( runBeforeMapping[zerosLeft] )
+    else:
+      runBefore = bs.tab( runBeforeMapping[7] )
     print "run", runBefore
     zerosLeft -= runBefore
     if zerosLeft == 0:
       break
-
+  return totalCoeff
 
 def macroblockLayer( bs ):
-  print "=============================="
   print "macroblockLayer" # page 59
   print "  mb_type", bs.golomb() # for P-slice, Table 7-10, page 91
   # md_type, name, NumMbPart, MbPartPredMode
@@ -211,9 +223,59 @@ def macroblockLayer( bs ):
   print "CBP  coded_block_pattern", cbp  #         cbp= get_ue_golomb(&h->gb);
   print "mb_qp_delta", bs.golomb()
 
-  cbpTab = {2:4}
-  for i in xrange(cbpTab[cbp]):
-    residual( bs )
+  # TODO use conversion table, page 174, column Inter
+  if cbp in [2,3]:
+    nC = [0]*4
+    nC[0] = residual( bs, nC=0 ) # Luma only 4x
+    nC[1] = residual( bs, nC[0] ) # left
+    nC[2] = residual( bs, nC[0] ) # up
+    nC[3] = residual( bs, (nC[1]+nC[2]+1)/2 ) # left+up/2
+  elif cbp == 6:
+    for i in xrange(2):
+      residual( bs, nC=-1 ) # ChrDC
+    nC = [0]*8
+    nC[0] = residual( bs, nC=0 ) # ChrAC
+    nC[1] = residual( bs, nC=nC[0] ) # left
+    nC[2] = residual( bs, nC=nC[0] ) # up
+    nC[3] = residual( bs, (nC[1]+nC[2]+1)/2 ) # left+up/2
+    nC[4] = residual( bs, nC=nC[1] ) # left
+    nC[5] = residual( bs, nC=nC[4] ) # left
+    nC[6] = residual( bs, nC=nC[4] ) # up
+    nC[7] = residual( bs, nC=(nC[6]+nC[5]+1)/2 ) # up
+  elif cbp == 26:
+    for i in xrange(4):
+      residual( bs, nC=0 ) # Luma only 4x
+    for i in xrange(2):
+      residual( bs, nC=-1 ) # ChrDC
+    for i in xrange(8):
+      residual( bs, nC=0 ) # ChrAC
+  elif cbp == 29:
+    # corresponds to 43 = 0x2B, i.e. Luma 0,1,3 + ChrDC + ChrAC
+    # 0 1 4 5
+    # 2 3 6 7
+    # . . 8 9
+    # . . A B
+    nC = [0]*12
+    nC[0] = residual( bs, nC=0 ) # Luma 
+    nC[1] = residual( bs, nC=nC[0] ) # left
+    nC[2] = residual( bs, nC=nC[0] ) # up
+    nC[3] = residual( bs, (nC[1]+nC[2]+1)/2 ) # left+up/2
+    nC[4] = residual( bs, nC=nC[1] ) # left
+    nC[5] = residual( bs, nC=nC[4] ) # left
+    nC[6] = residual( bs, nC=(nC[4]+nC[3]+1)/2 )
+    nC[7] = residual( bs, nC=(nC[5]+nC[6]+1)/2 )
+    nC[8] = residual( bs, nC=nC[6] ) # up
+    nC[9] = residual( bs, nC=(nC[7]+nC[8]+1)/2 )
+    nC[10] = residual( bs, nC=nC[8] ) # up
+    nC[11] = residual( bs, nC=(nC[9]+nC[10]+1)/2 )
+    for i in xrange(2):
+      residual( bs, nC=-1 ) # ChrDC
+    for i in xrange(8):
+      residual( bs, nC=0 ) # ChrAC # TODO
+    sys.exit(0)
+  else:
+    print "UNSUPORTED CBP!", cbp
+    sys.exit(-1)
 
 
 def parsePSlice( bs ):
@@ -241,10 +303,16 @@ def parsePSlice( bs ):
   print "-------------------------"
 
   # SLICE DATA
-  for i in xrange(2):
-    print "mb_skip_flag", bs.golomb() # 0 -> MoreData=True
+  mbIndex = 0
+  for i in xrange(6):
+    skip = bs.golomb()
+    mbIndex += skip
+    print "mb_skip_flag", skip # 0 -> MoreData=True
+    print "=============== MB:", mbIndex, "==============="
     macroblockLayer( bs )
-
+    mbIndex += 1
+  print "THE END"
+  sys.exit(0)
 
 
 def parseFrame( filename ):
