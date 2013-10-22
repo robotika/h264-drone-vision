@@ -31,6 +31,18 @@ class H264Test( unittest.TestCase ):
     self.assertEqual( bs.tab( table ), "test01" )
     self.assertEqual( bs.tab( table, maxBits=4 ), None )
 
+  def testBinStr( self ):
+    tmp = VerboseWrapper( None )
+    self.assertEqual( len(tmp.binStr(2, 14)), 14 )
+
+  def testMix( self ):
+    self.assertEqual( mix(None, None), 0 )
+    self.assertEqual( mix(13, None), 13 )
+    self.assertEqual( mix(None, 5), 5 )
+    self.assertEqual( mix(13, 5), 9 )
+    self.assertEqual( mix(1, 4), 3 ) # round-up
+
+
 if __name__ == "__main__":
   unittest.main() 
   

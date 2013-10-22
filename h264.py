@@ -207,7 +207,19 @@ def residual( bs, nC ):
       break
   return totalCoeff
 
-def macroblockLayer( bs ):
+def mix( up, left ):
+  if up == None:
+    if left == None:
+      return 0
+    else:
+      return left
+  else:
+    if left == None:
+      return up
+    return (left+up+1)/2
+
+def macroblockLayer( bs, left, up ):
+  "input is BitStream, extra left column, and extra upper row"
   print "macroblockLayer" # page 59
   print "  mb_type", bs.golomb() # for P-slice, Table 7-10, page 91
   # md_type, name, NumMbPart, MbPartPredMode
@@ -224,59 +236,55 @@ def macroblockLayer( bs ):
   print "mb_qp_delta", bs.golomb()
 
   # TODO use conversion table, page 174, column Inter
-  if cbp in [2,3]:
-    nC = [0]*4
-    nC[0] = residual( bs, nC=0 ) # Luma only 4x
-    nC[1] = residual( bs, nC[0] ) # left
-    nC[2] = residual( bs, nC[0] ) # up
-    nC[3] = residual( bs, (nC[1]+nC[2]+1)/2 ) # left+up/2
-  elif cbp == 6:
-    for i in xrange(2):
-      residual( bs, nC=-1 ) # ChrDC
-    nC = [0]*8
-    nC[0] = residual( bs, nC=0 ) # ChrAC
-    nC[1] = residual( bs, nC=nC[0] ) # left
-    nC[2] = residual( bs, nC=nC[0] ) # up
-    nC[3] = residual( bs, (nC[1]+nC[2]+1)/2 ) # left+up/2
-    nC[4] = residual( bs, nC=nC[1] ) # left
-    nC[5] = residual( bs, nC=nC[4] ) # left
-    nC[6] = residual( bs, nC=nC[4] ) # up
-    nC[7] = residual( bs, nC=(nC[6]+nC[5]+1)/2 ) # up
-  elif cbp == 26:
-    for i in xrange(4):
-      residual( bs, nC=0 ) # Luma only 4x
-    for i in xrange(2):
-      residual( bs, nC=-1 ) # ChrDC
-    for i in xrange(8):
-      residual( bs, nC=0 ) # ChrAC
-  elif cbp == 29:
-    # corresponds to 43 = 0x2B, i.e. Luma 0,1,3 + ChrDC + ChrAC
-    # 0 1 4 5
-    # 2 3 6 7
-    # . . 8 9
-    # . . A B
-    nC = [0]*12
-    nC[0] = residual( bs, nC=0 ) # Luma 
-    nC[1] = residual( bs, nC=nC[0] ) # left
-    nC[2] = residual( bs, nC=nC[0] ) # up
-    nC[3] = residual( bs, (nC[1]+nC[2]+1)/2 ) # left+up/2
-    nC[4] = residual( bs, nC=nC[1] ) # left
-    nC[5] = residual( bs, nC=nC[4] ) # left
-    nC[6] = residual( bs, nC=(nC[4]+nC[3]+1)/2 )
-    nC[7] = residual( bs, nC=(nC[5]+nC[6]+1)/2 )
-    nC[8] = residual( bs, nC=nC[6] ) # up
-    nC[9] = residual( bs, nC=(nC[7]+nC[8]+1)/2 )
-    nC[10] = residual( bs, nC=nC[8] ) # up
-    nC[11] = residual( bs, nC=(nC[9]+nC[10]+1)/2 )
-    for i in xrange(2):
-      residual( bs, nC=-1 ) # ChrDC
-    for i in xrange(8):
-      residual( bs, nC=0 ) # ChrAC # TODO
-    sys.exit(0)
-  else:
-    print "UNSUPORTED CBP!", cbp
-    sys.exit(-1)
-
+  cbpInter = [ 0, 16, 1, 2, 4, 8, 32, 3, 5, 10,  # 0-9
+           12, 15, 47, 7, 11, 13, 14, 6, 9, 31, 
+           35, 37, 42, 44, 33, 34, 36, 40, 39, 43,
+           45, 46, 17, 18, 20, 24, 19, 21, 26, 28,
+           23, 27, 29, 30, 22, 25, 38, 41 ]
+  bitPattern = cbpInter[ cbp ]
+  nC = [0]*16
+  #### LUMA ####
+  # 0 1 4 5
+  # 2 3 6 7
+  # 8 9 C D
+  # A B E F
+  if bitPattern & 0x1: # upper left
+    nC[0] = residual( bs, mix(left[0], up[0]) ) # Luma only 4x
+    nC[1] = residual( bs, mix(nC[0], up[1]) ) # left
+    nC[2] = residual( bs, mix(left[1], nC[0]) ) # up
+    nC[3] = residual( bs, mix(nC[2],nC[1]) ) # left+up/2
+  if bitPattern & 0x2: # upper right
+    nC[4] = residual( bs, mix(nC[1], up[2]) )
+    nC[5] = residual( bs, mix(nC[4], up[3]) )
+    nC[6] = residual( bs, mix(nC[3], nC[4]) )
+    nC[7] = residual( bs, mix(nC[6], nC[5]) )
+  if bitPattern & 0x4: # lower left
+    nC[8] = residual( bs, mix(left[2], nC[6]) )
+    nC[9] = residual( bs, mix(nC[8], nC[7]) )
+    nC[10] = residual( bs, mix(left[3], nC[8]) )
+    nC[11] = residual( bs, mix(nC[10], nC[9]) )
+  if bitPattern & 0x8: # lower right
+    nC[12] = residual( bs, mix(nC[9],nC[6]) )
+    nC[13] = residual( bs, mix(nC[12],nC[7]) )
+    nC[14] = residual( bs, mix(nC[11],nC[12]) )
+    nC[15] = residual( bs, mix(nC[14],nC[13]) )
+  if bitPattern >= 16:
+    residual( bs, nC=-1 ) # ChrDC
+    residual( bs, nC=-1 ) # ChrDC
+    if bitPattern >= 32:
+      hack = nC[:]
+      nC = [0]*8
+      nC[0] = residual( bs, nC=0 ) # ChrAC
+      nC[1] = residual( bs, nC=nC[0] ) # left
+      nC[2] = residual( bs, nC=nC[0] ) # up
+      nC[3] = residual( bs, (nC[1]+nC[2]+1)/2 ) # left+up/2
+      nC[4] = residual( bs, nC=nC[1] ) # left
+      nC[5] = residual( bs, nC=nC[4] ) # left
+      nC[6] = residual( bs, nC=nC[4] ) # up
+      nC[7] = residual( bs, nC=(nC[6]+nC[5]+1)/2 ) # up
+      nC = hack
+  left = [nC[5], nC[7], nC[13], nC[15]]
+  return left, up
 
 def parsePSlice( bs ):
   print "P-slice"
@@ -304,12 +312,14 @@ def parsePSlice( bs ):
 
   # SLICE DATA
   mbIndex = 0
-  for i in xrange(6):
+  left = [None]*4
+  up = [None]*4
+  for i in xrange(7):
     skip = bs.golomb()
     mbIndex += skip
     print "mb_skip_flag", skip # 0 -> MoreData=True
     print "=============== MB:", mbIndex, "==============="
-    macroblockLayer( bs )
+    left, up = macroblockLayer( bs, left, up )
     mbIndex += 1
   print "THE END"
   sys.exit(0)
