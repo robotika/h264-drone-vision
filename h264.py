@@ -54,7 +54,7 @@ class BitStream:
       if key in table:
         print key
         return table[key]
-    print "EXIT", key
+    print "EXIT", key, table
     sys.exit()
 
     return None
@@ -159,15 +159,18 @@ def residual( bs, nC ):
   print "-residual .. nC = %d" % nC
   # TotalCoef and TrailingOnes (page 177)
   if nC in [0,1]:
-    coefTokenMapping = { '1':(0,0), '01' : (1,1), '001':(2,2), '00011':(3,3) } # 0 <= nC < 2 # TODO
+    coefTokenMapping = { '1':(0,0), '000101':(0,1), '01' : (1,1), '00000111':(0,2), '000100':(1,2), '001':(2,2), 
+        '000000111':(0,3), '00000110':(1,3), '0000101':(2,3), '00011':(3,3) } # 0 <= nC < 2 # TODO
   elif nC in [2,3]:
-    coefTokenMapping = { '11':(0,0) } # 2 <= nC < 4 # TODO
+    coefTokenMapping = { '11':(0,0), '001011':(0,1), '10':(1,1), '000111':(0,2), '00111':(1,2), '011':(2,2) } # 2 <= nC < 4 # TODO
   elif nC == -1:
-    coefTokenMapping = { '01':(0,0), '1':(1,1) } # nC == -1
+    coefTokenMapping = { '01':(0,0), '000111':(0,1), '1':(1,1), '000100':(0,2), '000110':(1,2),
+        '001':(2,2), '000011':(0,3), '0000011':(1,3), '0000010':(2,3), '000101':(3,3),
+        '000010':(0,4), '00000011':(1,4), '00000010':(2,4), '0000000':(3,4) } # nC == -1
   else:
     assert False, "UNSUPORTED nC=%d" % nC
 
-  totalCoeff, trailing1s = bs.tab( coefTokenMapping )
+  trailing1s, totalCoeff = bs.tab( coefTokenMapping )
   print "total %d, trailing1s %d" % (totalCoeff, trailing1s)
   for i in xrange(totalCoeff):
     if i < trailing1s:
@@ -175,15 +178,22 @@ def residual( bs, nC ):
     else:
       levelMapping = { '1':0, '01':1, '001':2 } # TODO
       levelPrefix = bs.tab( levelMapping,  maxBits=15 )
-      print "levelPrefix", levelPrefix, "suffix", bs.bits(levelPrefix)
+      print "levelPrefix", levelPrefix
+      #, "suffix", bs.bits(levelPrefix) # it is again complex - see page 179
   if totalCoeff == 0:
     return totalCoeff
-  totalZerosMapping = {}
-  totalZerosMapping[1] = { '1':0, '011':1, '010':2, '0011':3, '0010':4, '00011':5} # TODO page 181
-  totalZerosMapping[2] = { '111':0, '110':1, '101':2, '110':3, '011':4, '0101':5, '0100':6, 
-      '0011':7, '0010':8, '00011':9, '00010':10, '000011':11, '000010':12, '000001':13, '000000':14}
-  totalZerosMapping[3] = { '0101':0, '111':1, '110':2, '101':3, '0100':4, '0011':5, '100':6,
-      '011':7, '0010':8, '00011':9, '00010':10, '000001':11, '00001':12, '000000':13 }
+  totalZerosMapping = {} # Table 9-7, page 181
+  if nC == -1: # ChromaDC
+    totalZerosMapping[1] = { '1':0, '01':1, '001':2, '000':3 }
+    totalZerosMapping[2] = { '1':0, '01':1, '00':2 }
+    totalZerosMapping[3] = { '1':0, '0':1 }
+  else:
+    totalZerosMapping[1] = { '1':0, '011':1, '010':2, '0011':3, '0010':4, '00011':5, '00010':6, '000011':7,
+        '000010':8, '0000011':9, '0000010':10, '00000011':11, '00000010':12, '000000011':13, '000000010':14, '000000001':15 }
+    totalZerosMapping[2] = { '111':0, '110':1, '101':2, '100':3, '011':4, '0101':5, '0100':6, 
+        '0011':7, '0010':8, '00011':9, '00010':10, '000011':11, '000010':12, '000001':13, '000000':14}
+    totalZerosMapping[3] = { '0101':0, '111':1, '110':2, '101':3, '0100':4, '0011':5, '100':6,
+        '011':7, '0010':8, '00011':9, '00010':10, '000001':11, '00001':12, '000000':13 }
   totalZeros = bs.tab( totalZerosMapping[totalCoeff] )
   print "totalZeros", totalZeros
   runBeforeMapping = {} # Table 9-10, page 182
@@ -197,14 +207,14 @@ def residual( bs, nC ):
       '00001':8, '000001':9, '0000001':10, '00000001':11, '000000001':12, '0000000001':13, '00000000001':14}
   zerosLeft = totalZeros
   for i in xrange( totalCoeff-1 ):
+    if zerosLeft == 0:
+      break
     if zerosLeft < 7:
       runBefore = bs.tab( runBeforeMapping[zerosLeft] )
     else:
       runBefore = bs.tab( runBeforeMapping[7] )
     print "run", runBefore
     zerosLeft -= runBefore
-    if zerosLeft == 0:
-      break
   return totalCoeff
 
 def mix( up, left ):
@@ -232,9 +242,6 @@ def macroblockLayer( bs, left, up ):
   print "  mvd_l0", bs.golomb()
   print "  mvd_l1", bs.golomb()
   cbp = bs.golomb()
-  print "CBP  coded_block_pattern", cbp  #         cbp= get_ue_golomb(&h->gb);
-  print "mb_qp_delta", bs.golomb()
-
   # TODO use conversion table, page 174, column Inter
   cbpInter = [ 0, 16, 1, 2, 4, 8, 32, 3, 5, 10,  # 0-9
            12, 15, 47, 7, 11, 13, 14, 6, 9, 31, 
@@ -242,6 +249,10 @@ def macroblockLayer( bs, left, up ):
            45, 46, 17, 18, 20, 24, 19, 21, 26, 28,
            23, 27, 29, 30, 22, 25, 38, 41 ]
   bitPattern = cbpInter[ cbp ]
+  print "CBP  coded_block_pattern", cbp, bin(bitPattern)
+
+  print "mb_qp_delta", bs.golomb()
+
   nC = [0]*16
   #### LUMA ####
   # 0 1 4 5
@@ -314,7 +325,7 @@ def parsePSlice( bs ):
   mbIndex = 0
   left = [None]*4
   up = [None]*4
-  for i in xrange(7):
+  for i in xrange(10):
     skip = bs.golomb()
     mbIndex += skip
     print "mb_skip_flag", skip # 0 -> MoreData=True
