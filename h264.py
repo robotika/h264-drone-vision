@@ -162,7 +162,13 @@ def residual( bs, nC ):
     coefTokenMapping = { '1':(0,0), '000101':(0,1), '01' : (1,1), '00000111':(0,2), '000100':(1,2), '001':(2,2), 
         '000000111':(0,3), '00000110':(1,3), '0000101':(2,3), '00011':(3,3) } # 0 <= nC < 2 # TODO
   elif nC in [2,3]:
-    coefTokenMapping = { '11':(0,0), '001011':(0,1), '10':(1,1), '000111':(0,2), '00111':(1,2), '011':(2,2) } # 2 <= nC < 4 # TODO
+    coefTokenMapping = { '11':(0,0), '001011':(0,1), '10':(1,1), '000111':(0,2), '00111':(1,2), '011':(2,2),
+        '0000111':(0,3), '001010':(1,3), '001001':(2,3), '0101':(3,3), '00000111':(0,4), '000110':(1,4),
+        '000101':(2,4), '0100':(3,4), '00000100':(0,5), '0000110':(1,5), '0000101':(2,5), '00110':(3,5),
+        '000000111':(0,6), '00000110':(1,6), '00000101':(2,6), '001000':(3,6), '00000001111':(0,7),
+        '000000110':(1,7), '00000010 1':(2,7), '000100':(3,7), '00000001 011':(0,8), '00000001110':(1,8),
+        '00000001101':(2,8), '0000100':(3,8), '00000000 1111':(0,9), '00000001010':(1,9), '00000001001':(2,9),
+        } # 2 <= nC < 4 # TODO
   elif nC == -1:
     coefTokenMapping = { '01':(0,0), '000111':(0,1), '1':(1,1), '000100':(0,2), '000110':(1,2),
         '001':(2,2), '000011':(0,3), '0000011':(1,3), '0000010':(2,3), '000101':(3,3),
@@ -270,8 +276,8 @@ def macroblockLayer( bs, left, up ):
     nC[6] = residual( bs, mix(nC[3], nC[4]) )
     nC[7] = residual( bs, mix(nC[6], nC[5]) )
   if bitPattern & 0x4: # lower left
-    nC[8] = residual( bs, mix(left[2], nC[6]) )
-    nC[9] = residual( bs, mix(nC[8], nC[7]) )
+    nC[8] = residual( bs, mix(left[2], nC[2]) )
+    nC[9] = residual( bs, mix(nC[8], nC[3]) )
     nC[10] = residual( bs, mix(left[3], nC[8]) )
     nC[11] = residual( bs, mix(nC[10], nC[9]) )
   if bitPattern & 0x8: # lower right
@@ -293,8 +299,9 @@ def macroblockLayer( bs, left, up ):
       nC[5] = residual( bs, nC=nC[4] ) # left
       nC[6] = residual( bs, nC=nC[4] ) # up
       nC[7] = residual( bs, nC=(nC[6]+nC[5]+1)/2 ) # up
-      nC = hack
+      nC = hack[:]
   left = [nC[5], nC[7], nC[13], nC[15]]
+  print "REST", nC
   return left, up
 
 def parsePSlice( bs ):
@@ -325,12 +332,13 @@ def parsePSlice( bs ):
   mbIndex = 0
   left = [None]*4
   up = [None]*4
-  for i in xrange(10):
+  for i in xrange(14):
     skip = bs.golomb()
     mbIndex += skip
     print "mb_skip_flag", skip # 0 -> MoreData=True
     print "=============== MB:", mbIndex, "==============="
     left, up = macroblockLayer( bs, left, up )
+    print "LEFT", mbIndex, left
     mbIndex += 1
   print "THE END"
   sys.exit(0)
