@@ -265,25 +265,26 @@ def macroblockLayer( bs, left, up ):
   print "mb_qp_delta", bs.golomb()
 
   nC = [0]*16
+  n2C = [0]*8 # twice ChrAC, separated
   #### LUMA ####
   # 0 1 4 5
   # 2 3 6 7
   # 8 9 C D
   # A B E F
   if bitPattern & 0x1: # upper left
-    nC[0] = residual( bs, mix(left[0], up[0]) ) # Luma only 4x
-    nC[1] = residual( bs, mix(nC[0], up[1]) ) # left
-    nC[2] = residual( bs, mix(left[1], nC[0]) ) # up
+    nC[0] = residual( bs, mix(left[0][0], up[0][0]) ) # Luma only 4x
+    nC[1] = residual( bs, mix(nC[0], up[0][1]) ) # left
+    nC[2] = residual( bs, mix(left[0][1], nC[0]) ) # up
     nC[3] = residual( bs, mix(nC[2],nC[1]) ) # left+up/2
   if bitPattern & 0x2: # upper right
-    nC[4] = residual( bs, mix(nC[1], up[2]) )
-    nC[5] = residual( bs, mix(nC[4], up[3]) )
+    nC[4] = residual( bs, mix(nC[1], up[0][2]) )
+    nC[5] = residual( bs, mix(nC[4], up[0][3]) )
     nC[6] = residual( bs, mix(nC[3], nC[4]) )
     nC[7] = residual( bs, mix(nC[6], nC[5]) )
   if bitPattern & 0x4: # lower left
-    nC[8] = residual( bs, mix(left[2], nC[2]) )
+    nC[8] = residual( bs, mix(left[0][2], nC[2]) )
     nC[9] = residual( bs, mix(nC[8], nC[3]) )
-    nC[10] = residual( bs, mix(left[3], nC[8]) )
+    nC[10] = residual( bs, mix(left[0][3], nC[8]) )
     nC[11] = residual( bs, mix(nC[10], nC[9]) )
   if bitPattern & 0x8: # lower right
     nC[12] = residual( bs, mix(nC[9],nC[6]) )
@@ -294,18 +295,17 @@ def macroblockLayer( bs, left, up ):
     residual( bs, nC=-1 ) # ChrDC
     residual( bs, nC=-1 ) # ChrDC
     if bitPattern >= 32:
-      hack = nC[:]
-      nC = [0]*8
-      nC[0] = residual( bs, nC=0 ) # ChrAC
-      nC[1] = residual( bs, nC=nC[0] ) # left
-      nC[2] = residual( bs, nC=nC[0] ) # up
-      nC[3] = residual( bs, (nC[1]+nC[2]+1)/2 ) # left+up/2
-      nC[4] = residual( bs, nC=nC[1] ) # left
-      nC[5] = residual( bs, nC=nC[4] ) # left
-      nC[6] = residual( bs, nC=nC[4] ) # up
-      nC[7] = residual( bs, nC=(nC[6]+nC[5]+1)/2 ) # up
-      nC = hack[:]
-  left = [nC[5], nC[7], nC[13], nC[15]]
+      n2C[0] = residual( bs, mix(left[1][0], up[1][0]) ) # ChrAC
+      n2C[1] = residual( bs, mix(n2C[0], up[1][1]) )
+      n2C[2] = residual( bs, mix(left[1][1], n2C[0]) )
+      n2C[3] = residual( bs, mix(n2C[2],n2C[1]) )
+
+      n2C[4] = residual( bs, mix(left[2][0], up[2][0]) )
+      n2C[5] = residual( bs, mix(n2C[4], up[2][1]) )
+      n2C[6] = residual( bs, mix(left[2][1], n2C[4]) )
+      n2C[7] = residual( bs, mix(n2C[5], n2C[6]) )
+
+  left = [[nC[5], nC[7], nC[13], nC[15]],[n2C[1],n2C[3]],[n2C[5],n2C[7]]]
   print "REST", nC
   return left, up
 
@@ -335,8 +335,8 @@ def parsePSlice( bs ):
 
   # SLICE DATA
   mbIndex = 0
-  left = [None]*4
-  up = [None]*4
+  left = [[None]*4, [None]*2, [None]*2]
+  up = [[None]*4, [None]*2, [None]*2]
   for i in xrange(23):
     skip = bs.golomb()
     mbIndex += skip
