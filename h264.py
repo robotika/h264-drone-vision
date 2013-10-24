@@ -182,7 +182,10 @@ def residual( bs, nC ):
     if i < trailing1s:
       print "sign bit", bs.bit()
     else:
-      levelMapping = { '1':0, '01':1, '001':2 } # TODO
+      levelMapping = { '1':0, '01':1, '001':2, '0001':3, '00001':4, '000001':5,
+          '0000001':6, '00000001':7, '000000001':8, '0000000001':9, '00000000001':10,
+          '000000000001':11, '000000000000 1':12, '00000000000001':13,
+          '000000000000 001':14, '0000000000000001':15 } # Tab 9-6, page 180
       levelPrefix = bs.tab( levelMapping,  maxBits=15 )
       print "levelPrefix", levelPrefix
       #, "suffix", bs.bits(levelPrefix) # it is again complex - see page 179
@@ -200,13 +203,15 @@ def residual( bs, nC ):
         '0011':7, '0010':8, '00011':9, '00010':10, '000011':11, '000010':12, '000001':13, '000000':14}
     totalZerosMapping[3] = { '0101':0, '111':1, '110':2, '101':3, '0100':4, '0011':5, '100':6,
         '011':7, '0010':8, '00011':9, '00010':10, '000001':11, '00001':12, '000000':13 }
+    totalZerosMapping[4] = { '00011':0, '111':1, '0101':2, '0100':3, '110':4, '101':5, '100':6,
+        '0011':7, '011':8, '0010':9, '00010':10, '00001':11, '00000':12 }
   totalZeros = bs.tab( totalZerosMapping[totalCoeff] )
   print "totalZeros", totalZeros
   runBeforeMapping = {} # Table 9-10, page 182
   runBeforeMapping[1] = { '1':0, '0': 1 }
   runBeforeMapping[2] = { '1':0, '01': 1, '00':2 }
   runBeforeMapping[3] = { '11':0, '10': 1, '01':2, '00':3 }
-  runBeforeMapping[4] = { '11':0, '10': 1, '01':2, '001':3, '001':4 }
+  runBeforeMapping[4] = { '11':0, '10': 1, '01':2, '001':3, '000':4 }
   runBeforeMapping[5] = { '11':0, '10': 1, '011':2, '010':3, '001':4, '000':5 } 
   runBeforeMapping[6] = { '11':0, '000': 1, '001':2, '011':3, '010':4, '100':5, '100':6 }
   runBeforeMapping[7] = { '111':0, '110': 1, '101':2, '100':3, '011':4, '010':5, '001':6, '0001':7,
@@ -332,7 +337,7 @@ def parsePSlice( bs ):
   mbIndex = 0
   left = [None]*4
   up = [None]*4
-  for i in xrange(14):
+  for i in xrange(23):
     skip = bs.golomb()
     mbIndex += skip
     print "mb_skip_flag", skip # 0 -> MoreData=True
