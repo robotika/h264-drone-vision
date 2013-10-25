@@ -262,7 +262,8 @@ def macroblockLayer( bs, left, up ):
   bitPattern = cbpInter[ cbp ]
   print "CBP  coded_block_pattern", cbp, bin(bitPattern)
 
-  print "mb_qp_delta", bs.golomb()
+  if cbp > 0: # example ref. MB=43
+    print "mb_qp_delta", bs.golomb()
 
   nC = [0]*16
   n2C = [0]*8 # twice ChrAC, separated
@@ -337,7 +338,7 @@ def parsePSlice( bs ):
   mbIndex = 0
   left = [[None]*4, [None]*2, [None]*2]
   up = [[None]*4, [None]*2, [None]*2]
-  for i in xrange(23):
+  for i in xrange(80):
     skip = bs.golomb()
     mbIndex += skip
     print "mb_skip_flag", skip # 0 -> MoreData=True
