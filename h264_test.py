@@ -77,6 +77,12 @@ class H264Test( unittest.TestCase ):
     self.assertEqual( residual( bs, nC=3 ), 0 )
     self.assertEqual( bs.index, 2 )
 
+    # failing "sector 51"
+    bs = BitStream( buf=binData("00110 000 1 11 0010 011 11 11 11" ) )
+    self.assertEqual( residual( bs, nC=3 ), 5 )
+    self.assertEqual( bs.index, 1077959-1077935 )
+
+
 
 if __name__ == "__main__":
   unittest.main() 

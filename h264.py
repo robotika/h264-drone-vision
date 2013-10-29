@@ -216,16 +216,21 @@ def residual( bs, nC ):
 
   trailing1s, totalCoeff = bs.tab( coefTokenMapping )
   print "total %d, trailing1s %d" % (totalCoeff, trailing1s)
+  levelVLC = 0
+  levelMapping = {}
+  levelMapping[0] = { '1':0, '01':1, '001':2, '0001':3, '00001':4, '000001':5,
+      '0000001':6, '00000001':7, '000000001':8, '0000000001':9, '00000000001':10,
+      '000000000001':11, '000000000000 1':12, '00000000000001':13,
+      '000000000000 001':14, '0000000000000001':15 } # Tab 9-6, page 180
+  levelMapping[1] = { '10':1, '11':-1, '010':2, '011':-2 } # TODO complete
+    #  not found, only parallel implementation http://etrij.etri.re.kr/Cyber/Download/PublishedPaper/3105/etrij.oct2009.0510.pdf
   for i in xrange(totalCoeff):
     if i < trailing1s:
       print "sign bit", bs.bit()
     else:
-      levelMapping = { '1':0, '01':1, '001':2, '0001':3, '00001':4, '000001':5,
-          '0000001':6, '00000001':7, '000000001':8, '0000000001':9, '00000000001':10,
-          '000000000001':11, '000000000000 1':12, '00000000000001':13,
-          '000000000000 001':14, '0000000000000001':15 } # Tab 9-6, page 180
-      levelPrefix = bs.tab( levelMapping,  maxBits=15 )
+      levelPrefix = bs.tab( levelMapping[levelVLC],  maxBits=15 )
       print "levelPrefix", levelPrefix
+      levelVLC = min( levelVLC+1, 1 ) # hack
       #, "suffix", bs.bits(levelPrefix) # it is again complex - see page 179
   if totalCoeff == 0:
     return totalCoeff
