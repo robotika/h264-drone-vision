@@ -68,6 +68,16 @@ class H264Test( unittest.TestCase ):
     self.assertEqual( binData("11 0 0 101 0"), "\xCA" )
     self.assertEqual( binData("111"), "\xE0" )
 
+  def testResidual( self ):
+    bs = BitStream( buf=binData("01 " ) )
+    self.assertEqual( residual( bs, nC=-1 ), 0 )
+    self.assertEqual( bs.index, 2 )
+
+    bs = BitStream( buf=binData("11 " ) )
+    self.assertEqual( residual( bs, nC=3 ), 0 )
+    self.assertEqual( bs.index, 2 )
+
+
 if __name__ == "__main__":
   unittest.main() 
   
