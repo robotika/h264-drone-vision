@@ -2,6 +2,28 @@
 from h264 import *
 import unittest
 
+def binData( s ):
+  "convert 0/1/<space> string into byte buffer string"
+  ret = ""
+  mask = 1<<7
+  val = 0
+  for c in s:
+    if c == ' ':
+      continue
+    if c == '1':
+      val += mask
+    mask /= 2
+    if mask == 0:
+      ret += chr(val)
+      val = 0
+      mask = 1<<7
+  if mask != 1<<7:
+    ret += chr(val)
+  return ret
+
+
+  return "\xca"
+
 class H264Test( unittest.TestCase ): 
   def testBit( self ):
     self.assertEqual( BitStream('\xFF').bit(), 1 )
@@ -42,6 +64,9 @@ class H264Test( unittest.TestCase ):
     self.assertEqual( mix(13, 5), 9 )
     self.assertEqual( mix(1, 4), 3 ) # round-up
 
+  def testBinData( self ):
+    self.assertEqual( binData("11 0 0 101 0"), "\xCA" )
+    self.assertEqual( binData("111"), "\xE0" )
 
 if __name__ == "__main__":
   unittest.main() 
