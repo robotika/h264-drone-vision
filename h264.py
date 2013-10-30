@@ -308,8 +308,11 @@ def macroblockLayer( bs, left, up ):
   # mb_pred( mb_type )
 #  print "  ref_idx_l0", bs.golomb()  # MbPartPredMode( mb_type, mbPartIdx ) != Pred_L1
 #  print "  ref_idx_l1", bs.golomb()
-  print "  mvd_l0", bs.golomb()
-  print "  mvd_l1", bs.golomb()
+  
+  mvdL0 = bs.golomb()
+  print "  mvd_l0", mvdL0
+  mvdL1 = bs.golomb()
+  print "  mvd_l1", mvdL1
   cbp = bs.golomb()
   # TODO use conversion table, page 174, column Inter
   cbpInter = [ 0, 16, 1, 2, 4, 8, 32, 3, 5, 10,  # 0-9
@@ -367,7 +370,7 @@ def macroblockLayer( bs, left, up ):
   left = [[nC[5], nC[7], nC[13], nC[15]],[n2C[1],n2C[3]],[n2C[5],n2C[7]]]
   up = [[nC[10], nC[11], nC[14], nC[15]],[n2C[2],n2C[3]],[n2C[6],n2C[7]]]
   print "REST", nC
-  return left, up
+  return (mvdL0, mvdL1), left, up
 
 def parsePSlice( bs ):
   print "P-slice"
@@ -397,6 +400,7 @@ def parsePSlice( bs ):
   mbIndex = 0
   left = [[None]*4, [None]*2, [None]*2]
   upperRow = [[[None]*4, [None]*2, [None]*2]] * WIDTH
+  fout = open("mv_out.txt", "w")
   for i in xrange(300):
     skip = bs.golomb()
     if skip > 0:
@@ -409,10 +413,13 @@ def parsePSlice( bs ):
     print "mb_skip_flag", skip # 0 -> MoreData=True
     print "=============== MB:", mbIndex, "==============="
     print "UP", upperRow[mbIndex % WIDTH]
-    left, up = macroblockLayer( bs, left, upperRow[mbIndex % WIDTH] )
+    mvd, left, up = macroblockLayer( bs, left, upperRow[mbIndex % WIDTH] )
     print "LEFT/UP", mbIndex, left, up
     upperRow[mbIndex % WIDTH] = up
+    print "MOVE:", mbIndex % WIDTH, mbIndex / WIDTH, mvd[0], mvd[1]
+    fout.write("%d %d %d %d\n" % ( mbIndex % WIDTH, mbIndex / WIDTH, mvd[0], mvd[1] ) )
     mbIndex += 1
+  fout.close()
   print "THE END"
   sys.exit(0)
 
