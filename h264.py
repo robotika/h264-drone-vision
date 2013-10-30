@@ -12,6 +12,8 @@ import os
 NAL_HEADER = [0,0,0,1]
 PAVE_HEADER = [ord(x) for x in "PaVE"]
 
+WIDTH = 80 # for the first experiments hard-coded (otherwise available in SPS)
+
 class BitStream:
   def __init__( self, buf="" ):
     self.buf = buf
@@ -269,7 +271,7 @@ def residual( bs, nC ):
   runBeforeMapping[3] = { '11':0, '10': 1, '01':2, '00':3 }
   runBeforeMapping[4] = { '11':0, '10': 1, '01':2, '001':3, '000':4 }
   runBeforeMapping[5] = { '11':0, '10': 1, '011':2, '010':3, '001':4, '000':5 } 
-  runBeforeMapping[6] = { '11':0, '000': 1, '001':2, '011':3, '010':4, '100':5, '100':6 }
+  runBeforeMapping[6] = { '11':0, '000': 1, '001':2, '011':3, '010':4, '101':5, '100':6 }
   runBeforeMapping[7] = { '111':0, '110': 1, '101':2, '100':3, '011':4, '010':5, '001':6, '0001':7,
       '00001':8, '000001':9, '0000001':10, '00000001':11, '000000001':12, '0000000001':13, '00000000001':14}
   zerosLeft = totalZeros
@@ -363,6 +365,7 @@ def macroblockLayer( bs, left, up ):
       n2C[7] = residual( bs, mix(n2C[5], n2C[6]) )
 
   left = [[nC[5], nC[7], nC[13], nC[15]],[n2C[1],n2C[3]],[n2C[5],n2C[7]]]
+  up = [[nC[10], nC[11], nC[14], nC[15]],[n2C[2],n2C[3]],[n2C[6],n2C[7]]]
   print "REST", nC
   return left, up
 
@@ -393,14 +396,16 @@ def parsePSlice( bs ):
   # SLICE DATA
   mbIndex = 0
   left = [[None]*4, [None]*2, [None]*2]
-  up = [[None]*4, [None]*2, [None]*2]
-  for i in xrange(80):
+  upperRow = [[[None]*4, [None]*2, [None]*2]] * WIDTH
+  for i in xrange(300):
     skip = bs.golomb()
     mbIndex += skip
     print "mb_skip_flag", skip # 0 -> MoreData=True
     print "=============== MB:", mbIndex, "==============="
-    left, up = macroblockLayer( bs, left, up )
-    print "LEFT", mbIndex, left
+    print "UP", upperRow[mbIndex % WIDTH]
+    left, up = macroblockLayer( bs, left, upperRow[mbIndex % WIDTH] )
+    print "LEFT/UP", mbIndex, left, up
+    upperRow[mbIndex % WIDTH] = up
     mbIndex += 1
   print "THE END"
   sys.exit(0)

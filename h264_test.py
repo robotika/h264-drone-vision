@@ -82,6 +82,12 @@ class H264Test( unittest.TestCase ):
     self.assertEqual( residual( bs, nC=3 ), 5 )
     self.assertEqual( bs.index, 1077959-1077935 )
 
+    # uncompleted table MB=115 (was bug in  runBeforeMapping[6])
+    bs = BitStream( buf=binData("011 10 0100 101 1" ) )
+    self.assertEqual( residual( bs, nC=3 ), 2 )
+    self.assertEqual( bs.index, 1082430-1082418 )
+
+
 
 
 if __name__ == "__main__":
