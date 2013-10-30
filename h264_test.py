@@ -33,6 +33,12 @@ class H264Test( unittest.TestCase ):
     self.assertEqual( BitStream('\x5F' ).golomb(), 1 ) 
     self.assertEqual( BitStream('\x0F\x00' ).golomb(), 29 ) 
 
+  def testSignedGolomb( self ):
+    self.assertEqual( BitStream('\xFF').signedGolomb(), 0 )
+    self.assertEqual( BitStream(binData('010')).signedGolomb(), 1 )
+    self.assertEqual( BitStream(binData('011')).signedGolomb(), -1 )
+    self.assertEqual( BitStream(binData('0001000')).signedGolomb(), 4 )
+
   def testBitStream( self ):
     bs = BitStream( buf='\xBF' )
     self.assertEqual( bs.bits( 2 ), 2 )

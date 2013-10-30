@@ -42,6 +42,13 @@ class BitStream:
       ret = 2*ret + self.bit()
     return 2**zeros + ret - 1
 
+  def signedGolomb( self ):
+    tmp = self.golomb()
+    if tmp % 2 == 0:
+      return -tmp/2
+    return ( tmp + 1 ) / 2
+
+
   def alignedByte( self ):
     self.index = (self.index+7)&0xFFFFFFF8
     ret = ord(self.buf[self.index/8])
@@ -90,6 +97,13 @@ class VerboseWrapper:
     ret = self.worker.golomb()
     howMany = self.worker.index - addr
     self.printInfo( addr, "golomb(%d) val=%d " % (howMany, ret) )
+    return ret
+
+  def signedGolomb( self ):
+    addr = self.worker.index
+    ret = self.worker.signedGolomb()
+    howMany = self.worker.index - addr
+    self.printInfo( addr, "signedGolomb(%d) val=%d " % (howMany, ret) )
     return ret
 
   def alignedByte( self ):
@@ -309,9 +323,9 @@ def macroblockLayer( bs, left, up ):
 #  print "  ref_idx_l0", bs.golomb()  # MbPartPredMode( mb_type, mbPartIdx ) != Pred_L1
 #  print "  ref_idx_l1", bs.golomb()
   
-  mvdL0 = bs.golomb()
+  mvdL0 = bs.signedGolomb()
   print "  mvd_l0", mvdL0
-  mvdL1 = bs.golomb()
+  mvdL1 = bs.signedGolomb()
   print "  mvd_l1", mvdL1
   cbp = bs.golomb()
   # TODO use conversion table, page 174, column Inter
@@ -401,6 +415,7 @@ def parsePSlice( bs ):
   left = [[None]*4, [None]*2, [None]*2]
   upperRow = [[[None]*4, [None]*2, [None]*2]] * WIDTH
   fout = open("mv_out.txt", "w")
+  prevX, prevY = 0, 0
   for i in xrange(300):
     skip = bs.golomb()
     if skip > 0:
@@ -417,7 +432,9 @@ def parsePSlice( bs ):
     print "LEFT/UP", mbIndex, left, up
     upperRow[mbIndex % WIDTH] = up
     print "MOVE:", mbIndex % WIDTH, mbIndex / WIDTH, mvd[0], mvd[1]
-    fout.write("%d %d %d %d\n" % ( mbIndex % WIDTH, mbIndex / WIDTH, mvd[0], mvd[1] ) )
+    prevX += mvd[0]
+    prevY += mvd[1]
+    fout.write("%d %d %d %d\n" % ( mbIndex % WIDTH, mbIndex / WIDTH, prevX, prevY ) )
     mbIndex += 1
   fout.close()
   print "THE END"
