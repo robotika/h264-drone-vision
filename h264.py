@@ -399,7 +399,13 @@ def parsePSlice( bs ):
   upperRow = [[[None]*4, [None]*2, [None]*2]] * WIDTH
   for i in xrange(300):
     skip = bs.golomb()
+    if skip > 0:
+      # just guessing that left should be cleared
+      left = [[0]*4, [0]*2, [0]*2]
+      for mbi in xrange(skip):
+        upperRow[(mbIndex+mbi) % WIDTH] = [[0]*4, [0]*2, [0]*2]
     mbIndex += skip
+
     print "mb_skip_flag", skip # 0 -> MoreData=True
     print "=============== MB:", mbIndex, "==============="
     print "UP", upperRow[mbIndex % WIDTH]
