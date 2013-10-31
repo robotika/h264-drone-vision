@@ -415,8 +415,11 @@ def parsePSlice( bs ):
   left = [[None]*4, [None]*2, [None]*2]
   upperRow = [[[None]*4, [None]*2, [None]*2]] * WIDTH
   fout = open("mv_out.txt", "w")
-  prevX, prevY = 0, 0
-  for i in xrange(300):
+  leftX = None
+  upperX = [None] * WIDTH
+  leftY = None
+  upperY = [None] * WIDTH
+  for i in xrange(2000):
     skip = bs.golomb()
     if skip > 0:
       # just guessing that left should be cleared
@@ -424,6 +427,8 @@ def parsePSlice( bs ):
       for mbi in xrange(skip):
         upperRow[(mbIndex+mbi) % WIDTH] = [[0]*4, [0]*2, [0]*2]
     mbIndex += skip
+    if mbIndex % WIDTH == 0:
+      left = [[None]*4, [None]*2, [None]*2]
 
     print "mb_skip_flag", skip # 0 -> MoreData=True
     print "=============== MB:", mbIndex, "==============="
@@ -432,9 +437,14 @@ def parsePSlice( bs ):
     print "LEFT/UP", mbIndex, left, up
     upperRow[mbIndex % WIDTH] = up
     print "MOVE:", mbIndex % WIDTH, mbIndex / WIDTH, mvd[0], mvd[1]
-    prevX += mvd[0]
-    prevY += mvd[1]
-    fout.write("%d %d %d %d\n" % ( mbIndex % WIDTH, mbIndex / WIDTH, prevX, prevY ) )
+#    x = mix(leftX, upperX[mbIndex % WIDTH]) + mvd[0]
+#    y = mix(leftY, upperY[mbIndex % WIDTH]) + mvd[1]
+    x = mvd[0]
+    y = mvd[1]
+    fout.write("%d %d %d %d\n" % ( mbIndex % WIDTH, mbIndex / WIDTH, x, y ) )
+    leftX, leftY = x, y
+    upperX[mbIndex % WIDTH] = x
+    upperY[mbIndex % WIDTH] = y
     mbIndex += 1
   fout.close()
   print "THE END"
