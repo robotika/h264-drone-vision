@@ -13,6 +13,7 @@ NAL_HEADER = [0,0,0,1]
 PAVE_HEADER = [ord(x) for x in "PaVE"]
 
 WIDTH = 80 # for the first experiments hard-coded (otherwise available in SPS)
+HEIGHT = 45
 
 class BitStream:
   def __init__( self, buf="" ):
@@ -233,18 +234,18 @@ def residual( bs, nC ):
   trailing1s, totalCoeff = bs.tab( coefTokenMapping )
   print "total %d, trailing1s %d" % (totalCoeff, trailing1s)
   levelVLC = 0
-  levelMapping = {}
-  levelMapping[0] = { '1':0, '01':1, '001':2, '0001':3, '00001':4, '000001':5,
+  levelMapping = { '1':0, '01':1, '001':2, '0001':3, '00001':4, '000001':5,
       '0000001':6, '00000001':7, '000000001':8, '0000000001':9, '00000000001':10,
       '000000000001':11, '000000000000 1':12, '00000000000001':13,
       '000000000000 001':14, '0000000000000001':15 } # Tab 9-6, page 180
-  levelMapping[1] = { '10':1, '11':-1, '010':2, '011':-2 } # TODO complete
     #  not found, only parallel implementation http://etrij.etri.re.kr/Cyber/Download/PublishedPaper/3105/etrij.oct2009.0510.pdf
   for i in xrange(totalCoeff):
     if i < trailing1s:
       print "sign bit", bs.bit()
     else:
-      levelPrefix = bs.tab( levelMapping[levelVLC],  maxBits=15 )
+      levelPrefix = bs.tab( levelMapping,  maxBits=15 )
+      if levelVLC > 0:
+        print "bits", bs.bits( levelVLC )
       print "levelPrefix", levelPrefix
       levelVLC = min( levelVLC+1, 1 ) # hack
       #, "suffix", bs.bits(levelPrefix) # it is again complex - see page 179
@@ -419,7 +420,7 @@ def parsePSlice( bs ):
   upperX = [None] * WIDTH
   leftY = None
   upperY = [None] * WIDTH
-  for i in xrange(2000):
+  for i in xrange(4000):
     skip = bs.golomb()
     if skip > 0:
       # just guessing that left should be cleared
@@ -427,6 +428,8 @@ def parsePSlice( bs ):
       for mbi in xrange(skip):
         upperRow[(mbIndex+mbi) % WIDTH] = [[0]*4, [0]*2, [0]*2]
     mbIndex += skip
+    if mbIndex >= WIDTH*HEIGHT:
+      break
     if mbIndex % WIDTH == 0:
       left = [[None]*4, [None]*2, [None]*2]
 

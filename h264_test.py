@@ -93,6 +93,10 @@ class H264Test( unittest.TestCase ):
     self.assertEqual( residual( bs, nC=3 ), 2 )
     self.assertEqual( bs.index, 1082430-1082418 )
 
+    # extra shift MB=2085
+    bs = BitStream( buf=binData("000000111 01 11 0010 111 1 0 " ) )
+    self.assertEqual( residual( bs, nC=1 ), 3 )
+    self.assertEqual( bs.index, 1191109-1191087 )
 
 
 
