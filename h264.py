@@ -20,7 +20,7 @@ class BitStream:
     self.buf = buf
     self.index = 0
 
-  def bit( self ):
+  def bit( self, info=None ):
     if ord(self.buf[self.index/8]) & 0x80>> (self.index%8):
       ret = 1
     else:
@@ -28,13 +28,13 @@ class BitStream:
     self.index += 1
     return ret
 
-  def bits( self, howMany ):
+  def bits( self, howMany, info=None ):
     ret = 0
     for i in xrange(howMany):
       ret = ret*2 + self.bit()
     return ret
 
-  def golomb( self ):
+  def golomb( self, info=None ):
     zeros = 0
     while self.bit() == 0:
       zeros += 1
@@ -43,7 +43,7 @@ class BitStream:
       ret = 2*ret + self.bit()
     return 2**zeros + ret - 1
 
-  def signedGolomb( self ):
+  def signedGolomb( self, info=None ):
     tmp = self.golomb()
     if tmp % 2 == 0:
       return -tmp/2
@@ -56,13 +56,13 @@ class BitStream:
     self.index += 8
     return ret
 
-  def tab( self, table, maxBits=32 ):
+  def tab( self, table, maxBits=32, info=None ):
     "ce(v): context-adaptive variable-length entropy-coded syntax element"
     key = ''
     for i in xrange(maxBits):
       key += str(self.bit())
       if key in table:
-        print key
+#        print key
         return table[key]
     print "EXIT", key, table
     sys.exit()
@@ -74,50 +74,53 @@ class VerboseWrapper:
     self.worker = worker
     self.startOffset = startOffset
 
-  def printInfo( self, addr, s ):
-    print "\ntrace: @%d" % (self.startOffset + addr), s
+  def printInfo( self, addr, s, info=None ):
+    if info == None:
+      print "\ntrace: @%d" % (self.startOffset + addr), s
+    else:
+      print "\ntrace: @%d" % (self.startOffset + addr), s, info
 
   def binStr( self, num, places ):
     # ignore '0b' and fill zeros
     return ('0'*places+bin( num )[2:])[-places:]
 
-  def bit( self ):
+  def bit( self, info=None ):
     addr = self.worker.index
     ret = self.worker.bit()
-    self.printInfo( addr, "bit %d" % ret )
+    self.printInfo( addr, "bit %d" % ret, info )
     return ret
 
-  def bits( self, howMany ):
+  def bits( self, howMany, info=None ):
     addr = self.worker.index
     ret = self.worker.bits( howMany )
-    self.printInfo( addr, ("bits(%d) " % howMany) + self.binStr( ret, howMany ) )
+    self.printInfo( addr, ("bits(%d) " % howMany) + self.binStr( ret, howMany ), info )
     return ret
 
-  def golomb( self ):
+  def golomb( self, info=None ):
     addr = self.worker.index
     ret = self.worker.golomb()
     howMany = self.worker.index - addr
-    self.printInfo( addr, "golomb(%d) val=%d " % (howMany, ret) )
+    self.printInfo( addr, "golomb(%d) val=%d " % (howMany, ret), info )
     return ret
 
-  def signedGolomb( self ):
+  def signedGolomb( self, info=None ):
     addr = self.worker.index
     ret = self.worker.signedGolomb()
     howMany = self.worker.index - addr
-    self.printInfo( addr, "signedGolomb(%d) val=%d " % (howMany, ret) )
+    self.printInfo( addr, "signedGolomb(%d) val=%d " % (howMany, ret), info )
     return ret
 
   def alignedByte( self ):
     addr = self.worker.index
     ret = self.worker.alignedByte()
-    self.printInfo( addr, "alignedByte " + self.binStr( ret, 8 ) )
+#    self.printInfo( addr, "alignedByte " + self.binStr( ret, 8 ) )
     return ret
 
-  def tab( self, table, maxBits=32 ):
+  def tab( self, table, maxBits=32, info=None ):
     addr = self.worker.index
     ret = self.worker.tab( table, maxBits )
     howMany = self.worker.index - addr
-    self.printInfo( addr, "tab(%d) " % howMany + str( ret ) )
+    self.printInfo( addr, "tab(%d) " % howMany + str( ret ), info )
     return ret
 
 
@@ -169,11 +172,12 @@ def parsePPS( bs ):
   pps = [bs.alignedByte() for i in xrange(5)]
   assert pps == [0xce, 0x1, 0xa8, 0x77, 0x20], pps
 
-def residual( bs, nC ):
+def residual( bs, nC, verbose=False ):
   "read residual block/data"
   # page 63, 7.4.5.3.1 Residual block CAVLC syntax
-
-  print "-residual .. nC = %d" % nC
+  
+  if verbose:
+    print "-residual .. nC = %d" % nC
   # TotalCoef and TrailingOnes (page 177)
   if nC in [0,1]:
     coefTokenMapping = { '1':(0,0), '000101':(0,1), '01':(1,1), '00000111':(0,2), '000100':(1,2), '001':(2,2),
@@ -232,7 +236,8 @@ def residual( bs, nC ):
     assert False, "UNSUPORTED nC=%d" % nC
 
   trailing1s, totalCoeff = bs.tab( coefTokenMapping )
-  print "total %d, trailing1s %d" % (totalCoeff, trailing1s)
+  if verbose:
+    print "total %d, trailing1s %d" % (totalCoeff, trailing1s)
   levelVLC = 0
   levelMapping = { '1':0, '01':1, '001':2, '0001':3, '00001':4, '000001':5,
       '0000001':6, '00000001':7, '000000001':8, '0000000001':9, '00000000001':10,
@@ -241,12 +246,13 @@ def residual( bs, nC ):
     #  not found, only parallel implementation http://etrij.etri.re.kr/Cyber/Download/PublishedPaper/3105/etrij.oct2009.0510.pdf
   for i in xrange(totalCoeff):
     if i < trailing1s:
-      print "sign bit", bs.bit()
+      bs.bit( "sign bit" )
     else:
       levelPrefix = bs.tab( levelMapping,  maxBits=15 )
       if levelVLC > 0:
-        print "bits", bs.bits( levelVLC )
-      print "levelPrefix", levelPrefix
+        bs.bits( levelVLC, "bits" )
+      if verbose:
+        print "levelPrefix", levelPrefix
       levelVLC = min( levelVLC+1, 1 ) # hack
       #, "suffix", bs.bits(levelPrefix) # it is again complex - see page 179
   if totalCoeff == 0:
@@ -278,8 +284,7 @@ def residual( bs, nC ):
     totalZerosMapping[13] = { '000':0, '001':1, '1':2, '01':3 }
     totalZerosMapping[14] = { '00':0, '01':1, '1':2 }
     totalZerosMapping[15] = { '0':0, '1':1 }
-  totalZeros = bs.tab( totalZerosMapping[totalCoeff] )
-  print "totalZeros", totalZeros
+  totalZeros = bs.tab( totalZerosMapping[totalCoeff], info="totalZeros" )
   runBeforeMapping = {} # Table 9-10, page 182
   runBeforeMapping[1] = { '1':0, '0': 1 }
   runBeforeMapping[2] = { '1':0, '01': 1, '00':2 }
@@ -294,10 +299,9 @@ def residual( bs, nC ):
     if zerosLeft == 0:
       break
     if zerosLeft < 7:
-      runBefore = bs.tab( runBeforeMapping[zerosLeft] )
+      runBefore = bs.tab( runBeforeMapping[zerosLeft], info="run" )
     else:
-      runBefore = bs.tab( runBeforeMapping[7] )
-    print "run", runBefore
+      runBefore = bs.tab( runBeforeMapping[7], info="run" )
     zerosLeft -= runBefore
   return totalCoeff
 
@@ -312,10 +316,11 @@ def mix( up, left ):
       return up
     return (left+up+1)/2
 
-def macroblockLayer( bs, left, up ):
+def macroblockLayer( bs, left, up, verbose=False ):
   "input is BitStream, extra left column, and extra upper row"
-  print "macroblockLayer" # page 59
-  print "  mb_type", bs.golomb() # for P-slice, Table 7-10, page 91
+  if verbose:
+    print "macroblockLayer" # page 59
+  bs.golomb( "  mb_type" ) # for P-slice, Table 7-10, page 91
   # md_type, name, NumMbPart, MbPartPredMode
   # 0 P_L0_16x16 1 Pred_L0 na 16 16
   # P_L0_16x16: the samples of the macroblock are predicted with one luma macroblock partition of size 16x16 luma
@@ -324,11 +329,9 @@ def macroblockLayer( bs, left, up ):
 #  print "  ref_idx_l0", bs.golomb()  # MbPartPredMode( mb_type, mbPartIdx ) != Pred_L1
 #  print "  ref_idx_l1", bs.golomb()
   
-  mvdL0 = bs.signedGolomb()
-  print "  mvd_l0", mvdL0
-  mvdL1 = bs.signedGolomb()
-  print "  mvd_l1", mvdL1
-  cbp = bs.golomb()
+  mvdL0 = bs.signedGolomb( "  mvd_l0" )
+  mvdL1 = bs.signedGolomb( "  mvd_l1" )
+  cbp = bs.golomb( "CBP  coded_block_pattern" )
   # TODO use conversion table, page 174, column Inter
   cbpInter = [ 0, 16, 1, 2, 4, 8, 32, 3, 5, 10,  # 0-9
            12, 15, 47, 7, 11, 13, 14, 6, 9, 31, 
@@ -336,10 +339,11 @@ def macroblockLayer( bs, left, up ):
            45, 46, 17, 18, 20, 24, 19, 21, 26, 28,
            23, 27, 29, 30, 22, 25, 38, 41 ]
   bitPattern = cbpInter[ cbp ]
-  print "CBP  coded_block_pattern", cbp, bin(bitPattern)
+  if verbose:
+    print cbp, bin(bitPattern)
 
   if cbp > 0: # example ref. MB=43
-    print "mb_qp_delta", bs.golomb()
+    bs.golomb( "mb_qp_delta" )
 
   nC = [0]*16
   n2C = [0]*8 # twice ChrAC, separated
@@ -384,7 +388,7 @@ def macroblockLayer( bs, left, up ):
 
   left = [[nC[5], nC[7], nC[13], nC[15]],[n2C[1],n2C[3]],[n2C[5],n2C[7]]]
   up = [[nC[10], nC[11], nC[14], nC[15]],[n2C[2],n2C[3]],[n2C[6],n2C[7]]]
-  print "REST", nC
+#  print "REST", nC
   return (mvdL0, mvdL1), left, up
 
 
@@ -400,35 +404,35 @@ def median( a, b, c ):
 
 
 
-def parsePSlice( bs ):
+def parsePSlice( bs, fout, verbose=False ):
   print "P-slice"
-  print "first_mb_in_slice", bs.golomb()
-  print "slice_type", bs.golomb()
-  print "pic_parameter_set_id", bs.golomb()
-  print "frame_num", bs.bits(14) # HACK! should use parameter from SPS
+  bs.golomb( "first_mb_in_slice" )
+  bs.golomb( "slice_type" )
+  bs.golomb( "pic_parameter_set_id" )
+  bs.bits( 14, info="frame_num" ) # HACK! should use parameter from SPS
 # redundant_pic_cnt_present_flag: 0 (PPS)
-  print "num_ref_idx_active_override_flag", bs.bit()
-  print "h->ref_count[0]", bs.golomb()+1
-  print "ref_pic_list_reordering_flag_l0", bs.bit()
+  bs.bit( "num_ref_idx_active_override_flag" )
+  bs.golomb( "h->ref_count[0]" )
+  bs.bit( "ref_pic_list_reordering_flag_l0" )
 # weighted_pred_flag: 0
 # nal_ref_idc = 3
-  print "adaptive_ref_pic_marking_mode_flag", bs.bit()
+  bs.bit( "adaptive_ref_pic_marking_mode_flag" )
 # entropy_coding_mode_flag: 0
-  print "slice_qp_delta", bs.golomb()
+  bs.golomb( "slice_qp_delta" )
 # deblocking_filter_control_present_flag: 1
   if True:
-    print "disable_deblocking_filter_idc", bs.golomb()
+    bs.golomb( "disable_deblocking_filter_idc" )
     if True: # != 1
-      print "slice_alpha_c0_offset_div2", bs.golomb()
-      print "slice_beta_offset_div2", bs.golomb()
+      bs.golomb( "slice_alpha_c0_offset_div2" )
+      bs.golomb( "slice_beta_offset_div2" )
 # num_slice_groups_minus1: 0
-  print "-------------------------"
+  if verbose:
+    print "-------------------------"
 
   # SLICE DATA
   mbIndex = 0
   left = [[None]*4, [None]*2, [None]*2]
   upperRow = [[[None]*4, [None]*2, [None]*2]] * WIDTH
-  fout = open("mv_out.txt", "w")
   leftXY = None,None
   upperXY = [(None,None)] * (WIDTH+1) # to have available frameUR
   for i in xrange(4000):
@@ -439,6 +443,9 @@ def parsePSlice( bs ):
       leftXY = (0, 0)
       for mbi in xrange(skip):
         upperRow[(mbIndex+mbi) % WIDTH] = [[0]*4, [0]*2, [0]*2]
+        if (2+mbIndex) % WIDTH == 0:
+          # backup [-2] element for UR element
+          upperXY[-1] = upperXY[mbIndex % WIDTH]
         upperXY[(mbIndex+mbi) % WIDTH] = (0,0)
 
     mbIndex += skip
@@ -448,13 +455,16 @@ def parsePSlice( bs ):
       left = [[None]*4, [None]*2, [None]*2]
       leftXY = (0, 0)
 
-    print "mb_skip_flag", skip # 0 -> MoreData=True
-    print "=============== MB:", mbIndex, "==============="
-    print "UP", upperRow[mbIndex % WIDTH]
-    mvd, left, up = macroblockLayer( bs, left, upperRow[mbIndex % WIDTH] )
-    print "LEFT/UP", mbIndex, left, up
+    if verbose:
+      print "mb_skip_flag", skip # 0 -> MoreData=True
+      print "=============== MB:", mbIndex, "==============="
+      print "UP", upperRow[mbIndex % WIDTH]
+    mvd, left, up = macroblockLayer( bs, left, upperRow[mbIndex % WIDTH], verbose=verbose )
+    if verbose:
+      print "LEFT/UP", mbIndex, left, up
     upperRow[mbIndex % WIDTH] = up
-    print "MOVE:", mbIndex % WIDTH, mbIndex / WIDTH, mvd[0], mvd[1]
+    if verbose:
+      print "MOVE:", mbIndex % WIDTH, mbIndex / WIDTH, mvd[0], mvd[1]
     x = median(leftXY[0], upperXY[mbIndex % WIDTH][0], upperXY[1+ mbIndex % WIDTH][0]) + mvd[0]
     y = median(leftXY[1], upperXY[mbIndex % WIDTH][1], upperXY[1+ mbIndex % WIDTH][1]) + mvd[1]
     fout.write("%d %d %d %d\n" % ( mbIndex % WIDTH, mbIndex / WIDTH, x, y ) )
@@ -464,13 +474,17 @@ def parsePSlice( bs ):
       upperXY[-1] = upperXY[mbIndex % WIDTH]
     upperXY[mbIndex % WIDTH] = x, y
     mbIndex += 1
-  fout.close()
-  print "THE END"
-  sys.exit(0)
+  if verbose:
+    print "THE END"
+  fout.flush()
+#  sys.exit(0)
 
 
-def parseFrame( filename ):
-  bs = VerboseWrapper( BitStream( open(filename, "rb").read() ) )
+def parseFrame( filename, verbose=False ):
+  bs = BitStream( open(filename, "rb").read() )
+  if verbose:
+    bs = VerboseWrapper( bs )
+  fout = open("mv_out.txt", "w")
   header = [None, None, None, None]
   while True:  
     try:
@@ -480,7 +494,7 @@ def parseFrame( filename ):
     if header == NAL_HEADER:
       print hex(c)
       if c & 0x1F == 1:
-        parsePSlice( bs )
+        parsePSlice( bs, fout, verbose=verbose )
       elif c & 0x1F == 5:
         parseISlice( bs )
       # 7 = sequence parameter set (SPS)
@@ -502,6 +516,7 @@ def parseFrame( filename ):
       for i in xrange(headerSize-12+1):
         c = bs.alignedByte()
     header = header[1:] + [c]
+  fout.close()
 
 if __name__ == "__main__":
   if len(sys.argv) < 2:
