@@ -387,6 +387,19 @@ def macroblockLayer( bs, left, up ):
   print "REST", nC
   return (mvdL0, mvdL1), left, up
 
+
+def median( a, b, c ):
+  if a == None: # and b == None and c == None:
+    return 0
+  if a != None and b != None:
+    if c == None:
+      return sorted([a,b,0])[1]
+    else:
+      return sorted([a,b,c])[1]
+  return a
+
+
+
 def parsePSlice( bs ):
   print "P-slice"
   print "first_mb_in_slice", bs.golomb()
@@ -416,22 +429,24 @@ def parsePSlice( bs ):
   left = [[None]*4, [None]*2, [None]*2]
   upperRow = [[[None]*4, [None]*2, [None]*2]] * WIDTH
   fout = open("mv_out.txt", "w")
-  leftX = None
-  upperX = [None] * WIDTH
-  leftY = None
-  upperY = [None] * WIDTH
+  leftXY = None,None
+  upperXY = [(None,None)] * (WIDTH+1) # to have available frameUR
   for i in xrange(4000):
     skip = bs.golomb()
     if skip > 0:
       # just guessing that left should be cleared
       left = [[0]*4, [0]*2, [0]*2]
+      leftXY = (0, 0)
       for mbi in xrange(skip):
         upperRow[(mbIndex+mbi) % WIDTH] = [[0]*4, [0]*2, [0]*2]
+        upperXY[(mbIndex+mbi) % WIDTH] = (0,0)
+
     mbIndex += skip
     if mbIndex >= WIDTH*HEIGHT:
       break
     if mbIndex % WIDTH == 0:
       left = [[None]*4, [None]*2, [None]*2]
+      leftXY = (0, 0)
 
     print "mb_skip_flag", skip # 0 -> MoreData=True
     print "=============== MB:", mbIndex, "==============="
@@ -440,14 +455,14 @@ def parsePSlice( bs ):
     print "LEFT/UP", mbIndex, left, up
     upperRow[mbIndex % WIDTH] = up
     print "MOVE:", mbIndex % WIDTH, mbIndex / WIDTH, mvd[0], mvd[1]
-#    x = mix(leftX, upperX[mbIndex % WIDTH]) + mvd[0]
-#    y = mix(leftY, upperY[mbIndex % WIDTH]) + mvd[1]
-    x = mvd[0]
-    y = mvd[1]
+    x = median(leftXY[0], upperXY[mbIndex % WIDTH][0], upperXY[1+ mbIndex % WIDTH][0]) + mvd[0]
+    y = median(leftXY[1], upperXY[mbIndex % WIDTH][1], upperXY[1+ mbIndex % WIDTH][1]) + mvd[1]
     fout.write("%d %d %d %d\n" % ( mbIndex % WIDTH, mbIndex / WIDTH, x, y ) )
-    leftX, leftY = x, y
-    upperX[mbIndex % WIDTH] = x
-    upperY[mbIndex % WIDTH] = y
+    leftXY = x, y
+    if (2+mbIndex) % WIDTH == 0:
+      # backup [-2] element for UR element
+      upperXY[-1] = upperXY[mbIndex % WIDTH]
+    upperXY[mbIndex % WIDTH] = x, y
     mbIndex += 1
   fout.close()
   print "THE END"

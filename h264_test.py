@@ -98,6 +98,11 @@ class H264Test( unittest.TestCase ):
     self.assertEqual( residual( bs, nC=1 ), 3 )
     self.assertEqual( bs.index, 1191109-1191087 )
 
+  def testMedian( self ):
+    self.assertEqual( median( None, None, None), 0 )
+    self.assertEqual( median( 3, None, None), 3 )
+    self.assertEqual( median( 3, 13, 5), 5 )
+    self.assertEqual( median( -3, 11, None), 0 )
 
 
 if __name__ == "__main__":
