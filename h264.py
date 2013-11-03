@@ -440,14 +440,18 @@ def parsePSlice( bs, fout, verbose=False ):
     if skip > 0:
       # just guessing that left should be cleared
       left = [[0]*4, [0]*2, [0]*2]
-      leftXY = (0, 0)
       for mbi in xrange(skip):
         upperRow[(mbIndex+mbi) % WIDTH] = [[0]*4, [0]*2, [0]*2]
-        if (2+mbIndex) % WIDTH == 0:
+        if leftXY in [(0,0), (None,None)] or upperXY[(mbIndex+mbi) % WIDTH] in [(0,0), (None,None)] :
+          x,y = 0,0
+        else:         
+          x = median(leftXY[0], upperXY[(mbIndex+mbi) % WIDTH][0], upperXY[1+ (mbIndex+mbi) % WIDTH][0])
+          y = median(leftXY[1], upperXY[(mbIndex+mbi) % WIDTH][1], upperXY[1+ (mbIndex+mbi) % WIDTH][1])
+        if (2+mbIndex+mbi) % WIDTH == 0:
           # backup [-2] element for UR element
-          upperXY[-1] = upperXY[mbIndex % WIDTH]
-        upperXY[(mbIndex+mbi) % WIDTH] = (0,0)
-
+          upperXY[-1] = upperXY[(mbIndex+mbi) % WIDTH]
+        leftXY = (x,y)
+        upperXY[(mbIndex+mbi) % WIDTH] = (x,y)
     mbIndex += skip
     if mbIndex >= WIDTH*HEIGHT:
       break
@@ -494,7 +498,11 @@ def parseFrame( filename, verbose=False ):
     if header == NAL_HEADER:
       print hex(c)
       if c & 0x1F == 1:
-        parsePSlice( bs, fout, verbose=verbose )
+        try:
+          parsePSlice( bs, fout, verbose=verbose )
+        except:
+          sys.stderr.write( "ERROR parsing P slice\n" )
+          sys.exit(-1)
       elif c & 0x1F == 5:
         parseISlice( bs )
       # 7 = sequence parameter set (SPS)
