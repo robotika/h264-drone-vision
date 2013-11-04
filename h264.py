@@ -70,7 +70,7 @@ class BitStream:
     return None
 
 class VerboseWrapper:
-  def __init__( self, worker, startOffset=1075083-40 ):
+  def __init__( self, worker, startOffset=2380297-40 ):
     self.worker = worker
     self.startOffset = startOffset
 
@@ -255,7 +255,7 @@ def residual( bs, nC, verbose=False ):
         print "levelPrefix", levelPrefix
       levelVLC = min( levelVLC+1, 1 ) # hack
       #, "suffix", bs.bits(levelPrefix) # it is again complex - see page 179
-  if totalCoeff == 0:
+  if totalCoeff == 0 or totalCoeff == 16 or (totalCoeff == 4 and nC==-1):
     return totalCoeff
   totalZerosMapping = {} # Table 9-7, page 181
   if nC == -1: # ChromaDC
@@ -472,6 +472,7 @@ def parsePSlice( bs, fout, verbose=False ):
     x = median(leftXY[0], upperXY[mbIndex % WIDTH][0], upperXY[1+ mbIndex % WIDTH][0]) + mvd[0]
     y = median(leftXY[1], upperXY[mbIndex % WIDTH][1], upperXY[1+ mbIndex % WIDTH][1]) + mvd[1]
     fout.write("%d %d %d %d\n" % ( mbIndex % WIDTH, mbIndex / WIDTH, x, y ) )
+    fout.flush()
     leftXY = x, y
     if (2+mbIndex) % WIDTH == 0:
       # backup [-2] element for UR element
