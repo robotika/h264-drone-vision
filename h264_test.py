@@ -104,6 +104,138 @@ class H264Test( unittest.TestCase ):
     self.assertEqual( median( 3, 13, 5), 5 )
     self.assertEqual( median( -3, 11, None), 0 )
 
+  def testLum16DC( self ):
+    """
+*********** POC: 2 (I/P) MB: 48 Slice: 0 Type 0 **********
+@1184157 mb_skip_run                                                 1 (  0) 
+@1184158 mb_type                                               0001000 (  7) 
+@1184165 intra_chroma_pred_mode                                    010 (  1) 
+@1184168 mb_qp_delta                                                 1 (  0) 
+@1184169 Lum16DC # c & tr.1s vlc=0 #c=4 #t1=3                   000011 (  3) 
+@1184175 Lum16DC trailing ones sign (0,0)                          111 (  7) 
+@1184178 Lum16DC lev (0,0) k=0 vlc=0                                01 (  1) 
+@1184180 Lum16DC totalrun (0,0) vlc=3                              100 (  4) 
+@1184183 Lum16DC run (3,0) k=3 vlc=5                                11 (  3) 
+@1184185 Lum16DC run (2,0) k=2 vlc=5                               000 (  0) 
+@1184188 Lum16DC run (1,0) k=1 vlc=4                               011 (  3) """
+    bs = VerboseWrapper( BitStream( buf=binData("0001000 010 1 000011 111 01 100 11 000 011" ) ), startOffset=1184158 ) # without skip
+    left = [[None]*4, [None]*2, [None]*2]
+    up = [[None]*4, [None]*2, [None]*2]
+    print "testLum16DC START"
+    macroblockLayer( bs, left, up, verbose=True )
+    print "testLum16DC END"
+    self.assertEqual( bs.worker.index, 1184191-1184158 )
+
+    """
+*********** POC: 2 (I/P) MB: 206 Slice: 0 Type 0 **********
+@1198123 mb_skip_run                                                 1 (  0) 
+@1198124 mb_type                                                 00111 (  6) 
+@1198129 intra_chroma_pred_mode                                    011 (  2) 
+@1198132 mb_qp_delta                                             00101 ( -2) 
+@1198137 Lum16DC # c & tr.1s vlc=0 #c=5 #t1=3                  0000100 (  4) 
+@1198144 Lum16DC trailing ones sign (0,0)                          011 (  3) 
+@1198147 Lum16DC lev (0,0) k=1 vlc=0                                 1 (  1) 
+@1198148 Lum16DC lev (0,0) k=0 vlc=1                                11 (  3) 
+@1198150 Lum16DC totalrun (0,0) vlc=4                             0100 (  4) 
+@1198154 Lum16DC run (4,0) k=4 vlc=0                                 1 (  1) 
+@1198155 Lum16DC run (3,0) k=3 vlc=0                                 1 (  1) 
+@1198156 Lum16DC run (2,0) k=2 vlc=0                                 1 (  1) 
+@1198157 Lum16DC run (1,0) k=1 vlc=0                                 0 (  0) """
+    bs = VerboseWrapper( BitStream( buf=binData("00111 011 00101 0000100 011  1 11 0100 1 1 1  0" ) ), startOffset=1198124 ) # without skip
+    left = [[None]*4, [None]*2, [None]*2]
+    up = [[None]*4, [None]*2, [None]*2]
+    print "testLum16DC START"
+    macroblockLayer( bs, left, up, verbose=True )
+    print "testLum16DC END"
+    self.assertEqual( bs.worker.index, 1198158-1198124 )
+
+
+    """
+*********** POC: 2 (I/P) MB: 368 Slice: 0 Type 0 **********
+@1211250 mb_skip_run                                                 1 (  0) 
+@1211251 mb_type                                             000010101 ( 20) 
+@1211260 intra_chroma_pred_mode                                    011 (  2) 
+@1211263 mb_qp_delta                                             00101 ( -2) 
+@1211268 Lum16DC # c & tr.1s vlc=0 #c=4 #t1=3                   000011 (  3) 
+@1211274 Lum16DC trailing ones sign (0,0)                          100 (  4) 
+@1211277 Lum16DC lev (0,0) k=0 vlc=0                                01 (  1) 
+@1211279 Lum16DC totalrun (0,0) vlc=3                              110 (  6) 
+@1211282 Lum16DC run (3,0) k=3 vlc=3                                10 (  2) 
+@1211284 Lum16DC run (2,0) k=2 vlc=2                                11 (  3) 
+@1211286 Lum16DC run (1,0) k=1 vlc=2                                10 (  2) 
+@1211288 Lum16AC # c & tr.1s vlc=0 #c=0 #t1=0                        1 (  1) 
+@1211289 Lum16AC # c & tr.1s vlc=0 #c=0 #t1=0                        1 (  1) 
+@1211290 Lum16AC # c & tr.1s vlc=0 #c=0 #t1=0                        1 (  1) 
+@1211291 Lum16AC # c & tr.1s vlc=0 #c=0 #t1=0                        1 (  1) 
+@1211292 Lum16AC # c & tr.1s vlc=0 #c=0 #t1=0                        1 (  1) 
+@1211293 Lum16AC # c & tr.1s vlc=0 #c=0 #t1=0                        1 (  1) 
+@1211294 Lum16AC # c & tr.1s vlc=0 #c=0 #t1=0                        1 (  1) 
+@1211295 Lum16AC # c & tr.1s vlc=0 #c=0 #t1=0                        1 (  1) 
+@1211296 Lum16AC # c & tr.1s vlc=0 #c=0 #t1=0                        1 (  1) 
+@1211297 Lum16AC # c & tr.1s vlc=0 #c=0 #t1=0                        1 (  1) 
+@1211298 Lum16AC # c & tr.1s vlc=0 #c=0 #t1=0                        1 (  1) 
+@1211299 Lum16AC # c & tr.1s vlc=0 #c=0 #t1=0                        1 (  1) 
+@1211300 Lum16AC # c & tr.1s vlc=0 #c=0 #t1=0                        1 (  1) 
+@1211301 Lum16AC # c & tr.1s vlc=0 #c=1 #t1=1                       01 (  1) 
+@1211303 Lum16AC trailing ones sign (3,2)                            1 (  1) 
+@1211304 Lum16AC totalrun (3,2) vlc=0                                1 (  1) 
+@1211305 Lum16AC # c & tr.1s vlc=0 #c=0 #t1=0                        1 (  1) 
+@1211306 Lum16AC # c & tr.1s vlc=0 #c=0 #t1=0                        1 (  1)"""
+    print "Lum16AC START"
+    bs = VerboseWrapper( BitStream( buf=binData("000010101 011 00101 000011 100 01 110 10 11 10 1 1 1 1 1 1 1 1 1 1 1 1 1 01 1 1 1 1" ) ),
+        startOffset=1211251 ) # without skip
+    left = [[None]*4, [None]*2, [None]*2]
+    up = [[None]*4, [None]*2, [None]*2]
+    macroblockLayer( bs, left, up, verbose=True )
+    self.assertEqual( bs.worker.index, 1211307-1211251 )
+    print "Lum16AC END"
+
+    """
+*********** POC: 2 (I/P) MB: 1250 Slice: 0 Type 0 **********
+@1283940 mb_skip_run                                                 1 (  0) 
+@1283941 mb_type                                             000011010 ( 25) 
+@1283950 intra_chroma_pred_mode                                      1 (  0) 
+@1283951 mb_qp_delta                                                 1 (  0) 
+@1283952 Lum16DC # c & tr.1s vlc=0 #c=5 #t1=3                  0000100 (  4) 
+@1283959 Lum16DC trailing ones sign (0,0)                          101 (  5) 
+@1283962 Lum16DC lev (0,0) k=1 vlc=0                                 1 (  1) 
+@1283963 Lum16DC lev (0,0) k=0 vlc=1                                11 (  3) 
+@1283965 Lum16DC totalrun (0,0) vlc=4                              110 (  6) 
+@1283968 Lum16DC run (4,0) k=4 vlc=3                                01 (  1) 
+@1283970 Lum16DC run (3,0) k=3 vlc=1                                 1 (  1) 
+@1283971 Lum16DC run (2,0) k=2 vlc=1                                00 (  0) 
+@1283973 Lum16AC # c & tr.1s vlc=0 #c=0 #t1=0                        1 (  1) 
+@1283974 Lum16AC # c & tr.1s vlc=0 #c=0 #t1=0                        1 (  1) 
+@1283975 Lum16AC # c & tr.1s vlc=0 #c=0 #t1=0                        1 (  1) 
+@1283976 Lum16AC # c & tr.1s vlc=0 #c=0 #t1=0                        1 (  1) 
+@1283977 Lum16AC # c & tr.1s vlc=0 #c=0 #t1=0                        1 (  1) 
+@1283978 Lum16AC # c & tr.1s vlc=0 #c=0 #t1=0                        1 (  1) 
+@1283979 Lum16AC # c & tr.1s vlc=0 #c=1 #t1=1                       01 (  1) 
+@1283981 Lum16AC trailing ones sign (2,1)                            0 (  0) 
+@1283982 Lum16AC totalrun (2,1) vlc=0                              011 (  3) 
+@1283985 Lum16AC # c & tr.1s vlc=0 #c=0 #t1=0                        1 (  1) 
+@1283986 Lum16AC # c & tr.1s vlc=0 #c=0 #t1=0                        1 (  1) 
+@1283987 Lum16AC # c & tr.1s vlc=0 #c=0 #t1=0                        1 (  1) 
+@1283988 Lum16AC # c & tr.1s vlc=0 #c=0 #t1=0                        1 (  1) 
+@1283989 Lum16AC # c & tr.1s vlc=0 #c=0 #t1=0                        1 (  1) 
+@1283990 Lum16AC # c & tr.1s vlc=0 #c=0 #t1=0                        1 (  1) 
+@1283991 Lum16AC # c & tr.1s vlc=0 #c=0 #t1=0                        1 (  1) 
+@1283992 Lum16AC # c & tr.1s vlc=0 #c=0 #t1=0                        1 (  1) 
+@1283993 Lum16AC # c & tr.1s vlc=0 #c=0 #t1=0                        1 (  1) 
+@1283994 ChrDC # c & tr.1s  #c=0 #t1=0                              01 (  1) 
+@1283996 ChrDC # c & tr.1s  #c=1 #t1=1                               1 (  1) 
+@1283997 ChrDC trailing ones sign (0,0)                              0 (  0) 
+@1283998 ChrDC totalrun (0,0) vlc=0                                001 (  1) """
+    print "Lum16ACDC START"
+    bs = VerboseWrapper( BitStream( buf=binData("000011010 1 1 0000100 101 1 11 110 01 1 00 1 1 1 1 1 1 01 0 011 1 1 1 1 1 1 1 1 1 01 1 0 001" ) ),
+        startOffset=1283941 ) # without skip
+    left = [[None]*4, [None]*2, [None]*2]
+    up = [[None]*4, [None]*2, [None]*2]
+    macroblockLayer( bs, left, up, verbose=True )
+    self.assertEqual( bs.worker.index, 1284001-1283941 )
+    print "Lum16ACDC END"
+
+
 
 if __name__ == "__main__":
   unittest.main() 

@@ -70,7 +70,7 @@ class BitStream:
     return None
 
 class VerboseWrapper:
-  def __init__( self, worker, startOffset=2380297-40 ):
+  def __init__( self, worker, startOffset=1179764-75 ):
     self.worker = worker
     self.startOffset = startOffset
 
@@ -172,7 +172,7 @@ def parsePPS( bs ):
   pps = [bs.alignedByte() for i in xrange(5)]
   assert pps == [0xce, 0x1, 0xa8, 0x77, 0x20], pps
 
-def residual( bs, nC, verbose=False ):
+def residual( bs, nC, verbose=True ):
   "read residual block/data"
   # page 63, 7.4.5.3.1 Residual block CAVLC syntax
   
@@ -320,7 +320,7 @@ def macroblockLayer( bs, left, up, verbose=False ):
   "input is BitStream, extra left column, and extra upper row"
   if verbose:
     print "macroblockLayer" # page 59
-  bs.golomb( "  mb_type" ) # for P-slice, Table 7-10, page 91
+  mbType = bs.golomb( "  mb_type" ) # for P-slice, Table 7-10, page 91
   # md_type, name, NumMbPart, MbPartPredMode
   # 0 P_L0_16x16 1 Pred_L0 na 16 16
   # P_L0_16x16: the samples of the macroblock are predicted with one luma macroblock partition of size 16x16 luma
@@ -328,17 +328,31 @@ def macroblockLayer( bs, left, up, verbose=False ):
   # mb_pred( mb_type )
 #  print "  ref_idx_l0", bs.golomb()  # MbPartPredMode( mb_type, mbPartIdx ) != Pred_L1
 #  print "  ref_idx_l1", bs.golomb()
-  
-  mvdL0 = bs.signedGolomb( "  mvd_l0" )
-  mvdL1 = bs.signedGolomb( "  mvd_l1" )
-  cbp = bs.golomb( "CBP  coded_block_pattern" )
-  # TODO use conversion table, page 174, column Inter
-  cbpInter = [ 0, 16, 1, 2, 4, 8, 32, 3, 5, 10,  # 0-9
+  assert mbType in [0, 6, 7, 20, 25], mbType # TODO support more types
+  if mbType in [6, 7, 20, 25]:
+    mvdL0 = 0
+    mvdL1 = 0
+    cbp = bs.golomb( "intra_chroma_pred_mode" ) # page 94
+    bs.golomb( "mb_qp_delta" )
+    noIdea = residual( bs, mix(left[0][0], up[0][0]) ) # Lum16DC
+    if mbType in [20,25]:
+      for tmpLum16AC in xrange(16):
+        noIdea2 = residual( bs, mix(left[0][0], up[0][0]) ) # Lum16AC
+      if mbType == 25:
+        noIdea3 = residual( bs, nC=-1 ) # ChrDC
+        noIdea3 = residual( bs, nC=-1 ) # ChrDC
+    return (mvdL0, mvdL1), left, up
+  else: # 0
+    mvdL0 = bs.signedGolomb( "  mvd_l0" )
+    mvdL1 = bs.signedGolomb( "  mvd_l1" )
+    cbp = bs.golomb( "CBP  coded_block_pattern" )
+    # TODO use conversion table, page 174, column Inter
+    cbpInter = [ 0, 16, 1, 2, 4, 8, 32, 3, 5, 10,  # 0-9
            12, 15, 47, 7, 11, 13, 14, 6, 9, 31, 
            35, 37, 42, 44, 33, 34, 36, 40, 39, 43,
            45, 46, 17, 18, 20, 24, 19, 21, 26, 28,
            23, 27, 29, 30, 22, 25, 38, 41 ]
-  bitPattern = cbpInter[ cbp ]
+    bitPattern = cbpInter[ cbp ]
   if verbose:
     print cbp, bin(bitPattern)
 
@@ -485,7 +499,7 @@ def parsePSlice( bs, fout, verbose=False ):
 #  sys.exit(0)
 
 
-def parseFrame( filename, verbose=False ):
+def parseFrame( filename, verbose=True ):
   bs = BitStream( open(filename, "rb").read() )
   if verbose:
     bs = VerboseWrapper( bs )
@@ -499,10 +513,10 @@ def parseFrame( filename, verbose=False ):
     if header == NAL_HEADER:
       print hex(c)
       if c & 0x1F == 1:
-        try:
+#        try:
           parsePSlice( bs, fout, verbose=verbose )
-        except:
-          sys.stderr.write( "ERROR parsing P slice\n" )
+#        except:
+#          sys.stderr.write( "ERROR parsing P slice\n" )
           sys.exit(-1)
       elif c & 0x1F == 5:
         parseISlice( bs )
