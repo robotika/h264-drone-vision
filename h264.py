@@ -328,14 +328,13 @@ def macroblockLayer( bs, left, up, verbose=False ):
   # mb_pred( mb_type )
 #  print "  ref_idx_l0", bs.golomb()  # MbPartPredMode( mb_type, mbPartIdx ) != Pred_L1
 #  print "  ref_idx_l1", bs.golomb()
-  assert mbType in [0, 6, 7, 20, 25], mbType # TODO support more types
-  if mbType in [6, 7, 20, 25]:
+  if mbType > 0:
     mvdL0 = 0
     mvdL1 = 0
     cbp = bs.golomb( "intra_chroma_pred_mode" ) # page 94
     bs.golomb( "mb_qp_delta" )
     noIdea = residual( bs, mix(left[0][0], up[0][0]) ) # Lum16DC
-    if mbType in [20,25]:
+    if mbType >= 13:
       for tmpLum16AC in xrange(16):
         noIdea2 = residual( bs, mix(left[0][0], up[0][0]) ) # Lum16AC
       if mbType == 25:
@@ -450,7 +449,7 @@ def parsePSlice( bs, fout, verbose=False ):
   leftXY = None,None
   upperXY = [(None,None)] * (WIDTH+1) # to have available frameUR
   for i in xrange(4000):
-    skip = bs.golomb()
+    skip = bs.golomb("mb_skip_flag")
     if skip > 0:
       # just guessing that left should be cleared
       left = [[0]*4, [0]*2, [0]*2]
@@ -474,7 +473,6 @@ def parsePSlice( bs, fout, verbose=False ):
       leftXY = (0, 0)
 
     if verbose:
-      print "mb_skip_flag", skip # 0 -> MoreData=True
       print "=============== MB:", mbIndex, "==============="
       print "UP", upperRow[mbIndex % WIDTH]
     mvd, left, up = macroblockLayer( bs, left, upperRow[mbIndex % WIDTH], verbose=verbose )
