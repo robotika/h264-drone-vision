@@ -8,6 +8,8 @@ import sys
 import struct
 import os
 
+VERBOSE=False
+
 #NAL_HEADER = "".join([chr(x) for x in [0,0,0,1]])
 NAL_HEADER = [0,0,0,1]
 PAVE_HEADER = [ord(x) for x in "PaVE"]
@@ -172,7 +174,7 @@ def parsePPS( bs ):
   pps = [bs.alignedByte() for i in xrange(5)]
   assert pps == [0xce, 0x1, 0xa8, 0x77, 0x20], pps
 
-def residual( bs, nC, verbose=True ):
+def residual( bs, nC, verbose=VERBOSE ):
   "read residual block/data"
   # page 63, 7.4.5.3.1 Residual block CAVLC syntax
   
@@ -316,7 +318,7 @@ def mix( up, left ):
       return up
     return (left+up+1)/2
 
-def macroblockLayer( bs, left, up, verbose=False ):
+def macroblockLayer( bs, left, up, verbose=VERBOSE ):
   "input is BitStream, extra left column, and extra upper row"
   if verbose:
     print "macroblockLayer" # page 59
@@ -496,10 +498,11 @@ def parsePSlice( bs, fout, verbose=False ):
 #  sys.exit(0)
 
 
-def parseFrame( filename, verbose=True ):
+def parseFrame( filename, verbose=VERBOSE ):
   bs = BitStream( open(filename, "rb").read() )
   if verbose:
     bs = VerboseWrapper( bs )
+  frameIndex = 0
   fout = open("mv_out.txt", "w")
   header = [None, None, None, None]
   while True:  
@@ -511,12 +514,15 @@ def parseFrame( filename, verbose=True ):
       print hex(c)
       if c & 0x1F == 1:
 #        try:
+          fout.write( "Frame %d\n" % frameIndex )
           parsePSlice( bs, fout, verbose=verbose )
+          frameIndex += 1
 #        except:
 #          sys.stderr.write( "ERROR parsing P slice\n" )
-          sys.exit(-1)
+#          sys.exit(-1)
       elif c & 0x1F == 5:
         parseISlice( bs )
+        frameIndex += 1
       # 7 = sequence parameter set (SPS)
       elif c & 0x1F == 7:
         parseSPS( bs )
