@@ -333,14 +333,13 @@ def macroblockLayer( bs, left, up, verbose=False ):
     mvdL1 = 0
     cbp = bs.golomb( "intra_chroma_pred_mode" ) # page 94
     bs.golomb( "mb_qp_delta" )
-    noIdea = residual( bs, mix(left[0][0], up[0][0]) ) # Lum16DC
-    if mbType >= 13:
-      for tmpLum16AC in xrange(16):
-        noIdea2 = residual( bs, mix(left[0][0], up[0][0]) ) # Lum16AC
-      if mbType == 25:
-        noIdea3 = residual( bs, nC=-1 ) # ChrDC
-        noIdea3 = residual( bs, nC=-1 ) # ChrDC
-    return (mvdL0, mvdL1), left, up
+    noIdea = residual( bs, mix( left[0][0], up[0][0]) ) # Lum16DC - TODO proper nC/table selection
+    if mbType < 13:
+      return (mvdL0, mvdL1), left, up
+    # for larger fake bit pattern
+    bitPattern = 0xF
+    if mbType == 25:
+      bitPattern = 0x1F
   else: # 0
     mvdL0 = bs.signedGolomb( "  mvd_l0" )
     mvdL1 = bs.signedGolomb( "  mvd_l1" )
@@ -352,11 +351,11 @@ def macroblockLayer( bs, left, up, verbose=False ):
            45, 46, 17, 18, 20, 24, 19, 21, 26, 28,
            23, 27, 29, 30, 22, 25, 38, 41 ]
     bitPattern = cbpInter[ cbp ]
+    if cbp > 0: # example ref. MB=43
+      bs.golomb( "mb_qp_delta" )
   if verbose:
     print cbp, bin(bitPattern)
 
-  if cbp > 0: # example ref. MB=43
-    bs.golomb( "mb_qp_delta" )
 
   nC = [0]*16
   n2C = [0]*8 # twice ChrAC, separated
