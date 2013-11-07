@@ -331,8 +331,8 @@ def macroblockLayer( bs, left, up, verbose=VERBOSE ):
 #  print "  ref_idx_l0", bs.golomb()  # MbPartPredMode( mb_type, mbPartIdx ) != Pred_L1
 #  print "  ref_idx_l1", bs.golomb()
   if mbType > 0:
-    mvdL0 = 0
-    mvdL1 = 0
+    mvdL0 = None # not defined, ignore previous predictions
+    mvdL1 = None
     cbp = bs.golomb( "intra_chroma_pred_mode" ) # page 94
     bs.golomb( "mb_qp_delta" )
     noIdea = residual( bs, mix( left[0][0], up[0][0]) ) # Lum16DC - TODO proper nC/table selection
@@ -482,9 +482,13 @@ def parsePSlice( bs, fout, verbose=False ):
     upperRow[mbIndex % WIDTH] = up
     if verbose:
       print "MOVE:", mbIndex % WIDTH, mbIndex / WIDTH, mvd[0], mvd[1]
-    x = median(leftXY[0], upperXY[mbIndex % WIDTH][0], upperXY[1+ mbIndex % WIDTH][0]) + mvd[0]
-    y = median(leftXY[1], upperXY[mbIndex % WIDTH][1], upperXY[1+ mbIndex % WIDTH][1]) + mvd[1]
-    fout.write("%d %d %d %d\n" % ( mbIndex % WIDTH, mbIndex / WIDTH, x, y ) )
+    if mvd != (None,None):
+      x = median(leftXY[0], upperXY[mbIndex % WIDTH][0], upperXY[1+ mbIndex % WIDTH][0]) + mvd[0]
+      y = median(leftXY[1], upperXY[mbIndex % WIDTH][1], upperXY[1+ mbIndex % WIDTH][1]) + mvd[1]
+      fout.write("%d %d %d %d\n" % ( mbIndex % WIDTH, mbIndex / WIDTH, x, y ) )
+    else:
+      x,y = 0,0
+
     fout.flush()
     leftXY = x, y
     if (2+mbIndex) % WIDTH == 0:
