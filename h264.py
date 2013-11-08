@@ -72,7 +72,7 @@ class BitStream:
     return None
 
 class VerboseWrapper:
-  def __init__( self, worker, startOffset=1179764-75 ):
+  def __init__( self, worker, startOffset=1875459-77 ):
     self.worker = worker
     self.startOffset = startOffset
 
@@ -241,6 +241,8 @@ def residual( bs, nC, verbose=VERBOSE ):
   if verbose:
     print "total %d, trailing1s %d" % (totalCoeff, trailing1s)
   levelVLC = 0
+  if totalCoeff > 10 and trailing1s < 3:
+    levelVLC = 1
   levelMapping = { '1':0, '01':1, '001':2, '0001':3, '00001':4, '000001':5,
       '0000001':6, '00000001':7, '000000001':8, '0000000001':9, '00000000001':10,
       '000000000001':11, '000000000000 1':12, '00000000000001':13,
@@ -250,12 +252,22 @@ def residual( bs, nC, verbose=VERBOSE ):
     if i < trailing1s:
       bs.bit( "sign bit" )
     else:
-      levelPrefix = bs.tab( levelMapping,  maxBits=15 )
+      levelPrefix = bs.tab( levelMapping,  maxBits=15, info="levelPrefix" )
+      if levelPrefix == 14 and levelVLC == 0: # page 179
+        levelVLC = 4
+      if levelPrefix == 15:
+        levelVLC = 12
       if levelVLC > 0:
         bs.bits( levelVLC, "bits" )
       if verbose:
         print "levelPrefix", levelPrefix
-      levelVLC = min( levelVLC+1, 1 ) # hack
+      if levelVLC == 0:
+        levelVLC = 1
+      else:
+        if levelVLC == 2 and levelPrefix >= 6:
+          assert False, "NOT (YET) SUPPORTED LEVEL level=%d prefix=%d" % (level, levelPrefix)
+        if levelPrefix >= 3:
+          levelVLC = 2
       #, "suffix", bs.bits(levelPrefix) # it is again complex - see page 179
   if totalCoeff == 0 or totalCoeff == 16 or (totalCoeff == 4 and nC==-1):
     return totalCoeff
@@ -519,12 +531,14 @@ def parseFrame( filename, verbose=VERBOSE ):
       if c & 0x1F == 1:
 #        try:
           fout.write( "Frame %d\n" % frameIndex )
+          print "Frame %d\n" % frameIndex
           parsePSlice( bs, fout, verbose=verbose )
           frameIndex += 1
 #        except:
 #          sys.stderr.write( "ERROR parsing P slice\n" )
 #          sys.exit(-1)
       elif c & 0x1F == 5:
+        print "Frame %d\n" % frameIndex
         parseISlice( bs )
         frameIndex += 1
       # 7 = sequence parameter set (SPS)
