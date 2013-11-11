@@ -115,7 +115,7 @@ class H264Test( unittest.TestCase ):
 @1877613 Luma run (1,0) k=1 vlc=0                                    0 (  0) """    
     bs = VerboseWrapper( BitStream( buf=binData("000100 001 01 0010 00010 0110 011 11 10 01 1 1 0" ) ), 1877578 )
     self.assertEqual( residual( bs, nC=2 ), 7 )
-    self.assertEqual( bs.worker.index, 1877613-1877578+1 )
+    self.assertEqual( bs.worker.index, 1877614-1877578 )
     
 
   def testMedian( self ):

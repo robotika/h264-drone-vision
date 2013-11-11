@@ -478,6 +478,8 @@ def parsePSlice( bs, fout, verbose=False ):
           upperXY[-1] = upperXY[(mbIndex+mbi) % WIDTH]
         leftXY = (x,y)
         upperXY[(mbIndex+mbi) % WIDTH] = (x,y)
+        if (mbIndex+mbi) % WIDTH == 0:
+          leftXY = (0, 0)
     mbIndex += skip
     if mbIndex >= WIDTH*HEIGHT:
       break
