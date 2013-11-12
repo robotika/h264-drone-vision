@@ -468,6 +468,8 @@ def parsePSlice( bs, fout, verbose=False ):
       left = [[0]*4, [0]*2, [0]*2]
       for mbi in xrange(skip):
         upperRow[(mbIndex+mbi) % WIDTH] = [[0]*4, [0]*2, [0]*2]
+        if (mbIndex+mbi) % WIDTH == 0:
+          leftXY = (None, None)
         if leftXY in [(0,0), (None,None)] or upperXY[(mbIndex+mbi) % WIDTH] in [(0,0), (None,None)] :
           x,y = 0,0
         else:         
@@ -478,8 +480,6 @@ def parsePSlice( bs, fout, verbose=False ):
           upperXY[-1] = upperXY[(mbIndex+mbi) % WIDTH]
         leftXY = (x,y)
         upperXY[(mbIndex+mbi) % WIDTH] = (x,y)
-        if (mbIndex+mbi) % WIDTH == 0:
-          leftXY = (0, 0)
     mbIndex += skip
     if mbIndex >= WIDTH*HEIGHT:
       break
