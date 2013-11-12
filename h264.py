@@ -72,7 +72,7 @@ class BitStream:
     return None
 
 class VerboseWrapper:
-  def __init__( self, worker, startOffset=1875459-77 ):
+  def __init__( self, worker, startOffset=1389002-77 ):
     self.worker = worker
     self.startOffset = startOffset
 
@@ -247,7 +247,8 @@ def residual( bs, nC, verbose=VERBOSE ):
       '0000001':6, '00000001':7, '000000001':8, '0000000001':9, '00000000001':10,
       '000000000001':11, '000000000000 1':12, '00000000000001':13,
       '000000000000 001':14, '0000000000000001':15 } # Tab 9-6, page 180
-    #  not found, only parallel implementation http://etrij.etri.re.kr/Cyber/Download/PublishedPaper/3105/etrij.oct2009.0510.pdf
+    #  not found, only parallel implementation http://etrij.etri.re.kr/Cyber/Download/PublishedPaper/3105/etrij.oct2009.0510.pdf  
+  levelTwoOrHigher = (totalCoeff <= 3 or trailing1s != 3)
   for i in xrange(totalCoeff):
     if i < trailing1s:
       bs.bit( "sign bit" )
@@ -258,15 +259,22 @@ def residual( bs, nC, verbose=VERBOSE ):
       if levelPrefix == 15:
         levelVLC = 12
       if levelVLC > 0:
-        bs.bits( levelVLC, "bits" )
+        absLevel = ((levelPrefix << levelVLC) + bs.bits( levelVLC, "bits" ))/2 + 1
+      else:
+        absLevel = levelPrefix/2 + 1
+      if levelTwoOrHigher:
+        absLevel += 1
+        levelTwoOrHigher = False
       if verbose:
         print "levelPrefix", levelPrefix
       if levelVLC == 0:
         levelVLC = 1
+        if absLevel > 3:
+          levelVLC = 2
       else:
-        if levelVLC == 2 and levelPrefix >= 6:
+        if levelVLC == 2 and absLevel > 6:
           assert False, "NOT (YET) SUPPORTED LEVEL level=%d prefix=%d" % (level, levelPrefix)
-        if levelPrefix >= 3:
+        if absLevel > 3:
           levelVLC = 2
       #, "suffix", bs.bits(levelPrefix) # it is again complex - see page 179
   if totalCoeff == 0 or totalCoeff == 16 or (totalCoeff == 4 and nC==-1):
