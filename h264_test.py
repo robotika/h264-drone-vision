@@ -334,6 +334,59 @@ class H264Test( unittest.TestCase ):
     self.assertEqual( bs.worker.index, 1286024-1285940 )
     print "Lum16AC-2 END"
 
+  def testBlockType22( self ):
+    # no idea why it required ChrDC at the end
+    """
+*********** POC: 56 (I/P) MB: 1201 Slice: 0 Type 0 **********
+@4601750 mb_skip_run                                                 1 (  0) 
+@4601751 mb_type                                             000010111 ( 22) 
+@4601760 intra_chroma_pred_mode                                    011 (  2) 
+@4601763 mb_qp_delta                                         000010110 ( 11) 
+@4601772 Lum16DC # c & tr.1s vlc=1 #c=4 #t1=3                     0100 (  4) 
+@4601776 Lum16DC trailing ones sign (0,0)                          001 (  1) 
+@4601779 Lum16DC lev (0,0) k=0 vlc=0                                 1 (  1) 
+@4601780 Lum16DC totalrun (0,0) vlc=3                             0010 (  2) 
+@4601784 Lum16DC run (3,0) k=3 vlc=6                               011 (  3) 
+@4601787 Lum16DC run (2,0) k=2 vlc=4                                10 (  2) 
+@4601789 Lum16DC run (1,0) k=1 vlc=3                                11 (  3) 
+@4601791 Lum16AC # c & tr.1s vlc=1 #c=1 #t1=1                       10 (  2) 
+@4601793 Lum16AC trailing ones sign (0,0)                            1 (  1) 
+@4601794 Lum16AC totalrun (0,0) vlc=0                            00011 (  3) 
+@4601799 Lum16AC # c & tr.1s vlc=0 #c=0 #t1=0                        1 (  1) 
+@4601800 Lum16AC # c & tr.1s vlc=0 #c=2 #t1=2                      001 (  1) 
+@4601803 Lum16AC trailing ones sign (0,1)                           10 (  2) 
+@4601805 Lum16AC totalrun (0,1) vlc=1                             0101 (  5) 
+@4601809 Lum16AC run (1,1) k=1 vlc=4                               001 (  1) 
+@4601812 Lum16AC # c & tr.1s vlc=0 #c=0 #t1=0                        1 (  1) 
+@4601813 Lum16AC # c & tr.1s vlc=0 #c=0 #t1=0                        1 (  1) 
+@4601814 Lum16AC # c & tr.1s vlc=0 #c=0 #t1=0                        1 (  1) 
+@4601815 Lum16AC # c & tr.1s vlc=0 #c=0 #t1=0                        1 (  1) 
+@4601816 Lum16AC # c & tr.1s vlc=0 #c=0 #t1=0                        1 (  1) 
+@4601817 Lum16AC # c & tr.1s vlc=0 #c=3 #t1=3                    00011 (  3) 
+@4601822 Lum16AC trailing ones sign (0,2)                          100 (  4) 
+@4601825 Lum16AC totalrun (0,2) vlc=2                              101 (  5) 
+@4601828 Lum16AC run (2,2) k=2 vlc=2                                11 (  3) 
+@4601830 Lum16AC run (1,2) k=1 vlc=2                                00 (  0) 
+@4601832 Lum16AC # c & tr.1s vlc=1 #c=0 #t1=0                       11 (  3) 
+@4601834 Lum16AC # c & tr.1s vlc=1 #c=0 #t1=0                       11 (  3) 
+@4601836 Lum16AC # c & tr.1s vlc=0 #c=0 #t1=0                        1 (  1) 
+@4601837 Lum16AC # c & tr.1s vlc=0 #c=0 #t1=0                        1 (  1) 
+@4601838 Lum16AC # c & tr.1s vlc=0 #c=0 #t1=0                        1 (  1) 
+@4601839 Lum16AC # c & tr.1s vlc=0 #c=0 #t1=0                        1 (  1) 
+@4601840 Lum16AC # c & tr.1s vlc=0 #c=0 #t1=0                        1 (  1) 
+@4601841 ChrDC # c & tr.1s  #c=1 #t1=1                               1 (  1) 
+@4601842 ChrDC trailing ones sign (0,0)                              1 (  1) 
+@4601843 ChrDC totalrun (0,0) vlc=0                                  1 (  1) 
+@4601844 ChrDC # c & tr.1s  #c=0 #t1=0                              01 (  1) """
+    bs = VerboseWrapper( BitStream( buf=binData("000010111 011 000010110 0100 001 1 0010 011 10 11 10 1 00011 1 001 10 0101 001\
+        1 1 1 1 1 00011 100 101 11 00 11 11 1 1 1 1 1 1 1 1 01" ) ),
+        startOffset=4601751 ) # without skip
+    left = [[0, 0, 0, 0], [0, 0], [0, 0]]
+    up = [[3, 0, 0, 0], [0, 0], [0, 0]] # maybe it is not correct??
+    # mb_type 18 = I_16x16_1_1_1 Intra_16x16  1  1  15
+    macroblockLayer( bs, left, up, verbose=True )
+    self.assertEqual( bs.worker.index, 4601846-4601751 )
+
 
 if __name__ == "__main__":
   unittest.main() 
