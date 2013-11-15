@@ -427,15 +427,19 @@ def macroblockLayer( bs, left, up, verbose=VERBOSE ):
 
 
 def median( a, b, c ):
-  if a == None: # and b == None and c == None:
+  # all invalid
+  if a == None and b == None and c == None:
     return 0
-  if a != None and b != None:
-    if c == None:
-      return sorted([a,b,0])[1]
-    else:
-      return sorted([a,b,c])[1]
-  return a
-
+  # one valid
+  if a != None and b == None and c == None:
+    return a
+  if a == None and b != None and c == None:
+    return b
+  if a == None and b == None and c != None:
+    return c
+  # at most one invalid
+  tmp = [x for x in [a,b,c] if x != None] + [0]
+  return sorted(tmp[:3])[1]
 
 
 def parsePSlice( bs, fout, verbose=False ):
@@ -493,7 +497,7 @@ def parsePSlice( bs, fout, verbose=False ):
       break
     if mbIndex % WIDTH == 0:
       left = [[None]*4, [None]*2, [None]*2]
-      leftXY = (0, 0)
+      leftXY = (None,None)
 
     if verbose:
       print "=============== MB:", mbIndex, "==============="

@@ -145,6 +145,9 @@ class H264Test( unittest.TestCase ):
     self.assertEqual( median( 3, None, None), 3 )
     self.assertEqual( median( 3, 13, 5), 5 )
     self.assertEqual( median( -3, 11, None), 0 )
+    self.assertEqual( median( None, 4, None), 4 ) # frame=113, x=0, y=16
+    self.assertEqual( median( None, None, 13), 13 ) # not detected yet
+    self.assertEqual( median( None, 0, 0), 0 ) # bug
 
 
   def testLum16DC( self ):
