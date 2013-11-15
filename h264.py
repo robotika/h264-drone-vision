@@ -513,7 +513,7 @@ def parsePSlice( bs, fout, verbose=False ):
       y = median(leftXY[1], upperXY[mbIndex % WIDTH][1], upperXY[1+ mbIndex % WIDTH][1]) + mvd[1]
       fout.write("%d %d %d %d\n" % ( mbIndex % WIDTH, mbIndex / WIDTH, x, y ) )
     else:
-      x,y = 0,0
+      x,y = None, None
 
     fout.flush()
     leftXY = x, y
