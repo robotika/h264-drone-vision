@@ -360,9 +360,9 @@ def macroblockLayer( bs, left, up, verbose=VERBOSE ):
       return (mvdL0, mvdL1), left, up
     # for larger fake bit pattern
     bitPattern = 0xF
-    if mbType == 25 or mbType == 22: # not clear for 22
+    if mbType in [22, 23, 24, 25]:
       bitPattern = 0x1F
-    if mbType == 26: # frame 137, did not expect this type
+    if mbType in [26, 27, 28, 29]: # frame 137, did not expect this type
       bitPattern = 0x2F
   else: # 0
     mvdL0 = bs.signedGolomb( "  mvd_l0" )
@@ -516,6 +516,7 @@ def parsePSlice( bs, fout, verbose=False ):
       fout.write("%d %d %d %d\n" % ( mbIndex % WIDTH, mbIndex / WIDTH, x, y ) )
     else:
       x,y = None, None
+#      fout.write("%d %d None None\n" % ( mbIndex % WIDTH, mbIndex / WIDTH ) )
 
     fout.flush()
     leftXY = x, y
