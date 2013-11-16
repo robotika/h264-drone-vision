@@ -72,7 +72,7 @@ class BitStream:
     return None
 
 class VerboseWrapper:
-  def __init__( self, worker, startOffset=4548930-77 ):
+  def __init__( self, worker, startOffset=2397466-77 ):
     self.worker = worker
     self.startOffset = startOffset
 
@@ -362,6 +362,8 @@ def macroblockLayer( bs, left, up, verbose=VERBOSE ):
     bitPattern = 0xF
     if mbType == 25 or mbType == 22: # not clear for 22
       bitPattern = 0x1F
+    if mbType == 26: # frame 137, did not expect this type
+      bitPattern = 0x2F
   else: # 0
     mvdL0 = bs.signedGolomb( "  mvd_l0" )
     mvdL1 = bs.signedGolomb( "  mvd_l1" )
