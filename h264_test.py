@@ -475,6 +475,36 @@ class H264Test( unittest.TestCase ):
     macroblockLayer( bs, left, up, verbose=True )
     self.assertEqual( bs.worker.index, 2430034-2429881 )
   
+  def testMbType12( self ):
+    # frame0141.bin
+    """
+*********** POC: 52 (I/P) MB: 2950 Slice: 0 Type 0 **********
+@2871689 mb_skip_run                                                 1 (  0) 
+@2871690 mb_type                                               0001101 ( 12) 
+@2871697 intra_chroma_pred_mode                                      1 (  0) 
+@2871698 mb_qp_delta                                             00111 ( -3) 
+@2871703 Lum16DC # c & tr.1s vlc=0 #c=7 #t1=3                000000100 (  4) 
+@2871712 Lum16DC trailing ones sign (0,0)                          101 (  5) 
+@2871715 Lum16DC lev (0,0) k=3 vlc=0                                 1 (  1) 
+@2871716 Lum16DC lev (0,0) k=2 vlc=1                                11 (  3) 
+@2871718 Lum16DC lev (0,0) k=1 vlc=1                                10 (  2) 
+@2871720 Lum16DC lev (0,0) k=0 vlc=1                               010 (  2) 
+@2871723 Lum16DC totalrun (0,0) vlc=6                              100 (  4) 
+@2871726 Lum16DC run (6,0) k=6 vlc=2                                11 (  3) 
+@2871728 Lum16DC run (5,0) k=5 vlc=2                                11 (  3) 
+@2871730 Lum16DC run (4,0) k=4 vlc=2                                01 (  1) 
+@2871732 Lum16DC run (3,0) k=3 vlc=0                                 0 (  0) 
+@2871733 ChrDC # c & tr.1s  #c=0 #t1=0                              01 (  1) 
+@2871735 ChrDC # c & tr.1s  #c=1 #t1=1                               1 (  1) 
+@2871736 ChrDC trailing ones sign (0,0)                              1 (  1) 
+@2871737 ChrDC totalrun (0,0) vlc=0                                  1 (  1) """
+    bs = VerboseWrapper( BitStream( buf=binData("0001101 1 00111 000000100 101 1 11 10 010 100 11 11 01 0 01 1 1 1 " ) ),
+        startOffset=2871689 ) # without skip
+    left = [[0, 0, 0, 0], [0, 0], [0, 0]]
+    up = [[0, 0, 0, 0], [0, 0], [0, 0]]
+    macroblockLayer( bs, left, up, verbose=True )
+    self.assertEqual( bs.worker.index, 2871738- 2871690 )
+
 
 if __name__ == "__main__":
   unittest.main() 

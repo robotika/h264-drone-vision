@@ -72,7 +72,7 @@ class BitStream:
     return None
 
 class VerboseWrapper:
-  def __init__( self, worker, startOffset=2397466-77 ):
+  def __init__( self, worker, startOffset=2785685-75 ):
     self.worker = worker
     self.startOffset = startOffset
 
@@ -273,7 +273,7 @@ def residual( bs, nC, verbose=VERBOSE ):
           levelVLC = 2
       else:
         if levelVLC == 2 and absLevel > 6:
-          assert False, "NOT (YET) SUPPORTED LEVEL level=%d prefix=%d" % (level, levelPrefix)
+          assert False, "NOT (YET) SUPPORTED LEVEL level=%d prefix=%d" % (levelVLC, levelPrefix)
         if absLevel > 3:
           levelVLC = 2
       #, "suffix", bs.bits(levelPrefix) # it is again complex - see page 179
@@ -356,10 +356,15 @@ def macroblockLayer( bs, left, up, verbose=VERBOSE ):
     cbp = bs.golomb( "intra_chroma_pred_mode" ) # page 94
     bs.golomb( "mb_qp_delta" )
     noIdea = residual( bs, mix( left[0][0], up[0][0]) ) # Lum16DC - TODO proper nC/table selection
-    if mbType < 13:
+    if mbType in [11, 12,13]:
+      bitPattern = 0x10
+    elif mbType < 13:
+      left = [[0]*4, [0]*2, [0]*2]
+      up = [[0]*4, [0]*2, [0]*2]
       return (mvdL0, mvdL1), left, up
-    # for larger fake bit pattern
-    bitPattern = 0xF
+    else:
+      # for larger fake bit pattern
+      bitPattern = 0xF
     if mbType in [22, 23, 24, 25]:
       bitPattern = 0x1F
     if mbType in [26, 27, 28, 29]: # frame 137, did not expect this type
