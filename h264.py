@@ -72,7 +72,7 @@ class BitStream:
     return None
 
 class VerboseWrapper:
-  def __init__( self, worker, startOffset=2785685-75 ):
+  def __init__( self, worker, startOffset=3064533-75 ):
     self.worker = worker
     self.startOffset = startOffset
 
@@ -487,13 +487,17 @@ def parsePSlice( bs, fout, verbose=False ):
       left = [[0]*4, [0]*2, [0]*2]
       for mbi in xrange(skip):
         upperRow[(mbIndex+mbi) % WIDTH] = [[0]*4, [0]*2, [0]*2]
+        leftAvailable = True
         if (mbIndex+mbi) % WIDTH == 0:
           leftXY = (None, None)
-        if leftXY in [(0,0), (None,None)] or upperXY[(mbIndex+mbi) % WIDTH] in [(0,0), (None,None)] :
+          leftAvailable = False
+        upAvailable = ( mbIndex+mbi > WIDTH )
+        if (not leftAvailable or leftXY == (0,0)) or (not upAvailable or upperXY[(mbIndex+mbi) % WIDTH] == (0,0)) :
           x,y = 0,0
         else:         
           x = median(leftXY[0], upperXY[(mbIndex+mbi) % WIDTH][0], upperXY[1+ (mbIndex+mbi) % WIDTH][0])
           y = median(leftXY[1], upperXY[(mbIndex+mbi) % WIDTH][1], upperXY[1+ (mbIndex+mbi) % WIDTH][1])
+          fout.write("%d %d %d %d (skip)\n" % ( (mbIndex+mbi) % WIDTH, (mbIndex+mbi) / WIDTH, x, y ) )
         if (2+mbIndex+mbi) % WIDTH == 0:
           # backup [-2] element for UR element
           upperXY[-1] = upperXY[(mbIndex+mbi) % WIDTH]
@@ -518,7 +522,8 @@ def parsePSlice( bs, fout, verbose=False ):
     if mvd != (None,None):
       x = median(leftXY[0], upperXY[mbIndex % WIDTH][0], upperXY[1+ mbIndex % WIDTH][0]) + mvd[0]
       y = median(leftXY[1], upperXY[mbIndex % WIDTH][1], upperXY[1+ mbIndex % WIDTH][1]) + mvd[1]
-      fout.write("%d %d %d %d\n" % ( mbIndex % WIDTH, mbIndex / WIDTH, x, y ) )
+#      fout.write("%d %d %d %d\n" % ( mbIndex % WIDTH, mbIndex / WIDTH, x, y ) )
+      fout.write("%d %d %d %d (%d,%d)\n" % ( mbIndex % WIDTH, mbIndex / WIDTH, x, y, mvd[0], mvd[1] ) )
     else:
       x,y = None, None
 #      fout.write("%d %d None None\n" % ( mbIndex % WIDTH, mbIndex / WIDTH ) )
