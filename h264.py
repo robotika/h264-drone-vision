@@ -74,7 +74,7 @@ class BitStream:
     return None
 
 class VerboseWrapper:
-  def __init__( self, worker, startOffset=613754-75 ):
+  def __init__( self, worker, startOffset=764096-75 ):
     self.worker = worker
     self.startOffset = startOffset
 
@@ -367,7 +367,7 @@ def macroblockLayer( bs, left, up ):
     else:
       # for larger fake bit pattern
       bitPattern = 0xF
-    if mbType in [14]:
+    if mbType in [14, 16]:
       bitPattern = 0x20
     if mbType in [22, 23, 24, 25]:
       bitPattern = 0x1F

@@ -580,6 +580,37 @@ class H264Test( unittest.TestCase ):
     macroblockLayer( bs, left, up )
     self.assertEqual( bs.worker.index, 707639-707573 )
 
+  def testMbType16( self ):
+    # frame0149.bin
+    """
+*********** POC: 8 (I/P) MB: 2896 Slice: 0 Type 0 **********
+@873939 mb_skip_run                                                  1 (  0) 
+@873940 mb_type                                              000010001 ( 16) 
+@873949 intra_chroma_pred_mode                                   00100 (  3) 
+@873954 mb_qp_delta                                                011 ( -1) 
+@873957 Lum16DC # c & tr.1s vlc=0 #c=3 #t1=3                     00011 (  3) 
+@873962 Lum16DC trailing ones sign (0,0)                           110 (  6) 
+@873965 Lum16DC totalrun (0,0) vlc=2                               101 (  5) 
+@873968 Lum16DC run (2,0) k=2 vlc=2                                 00 (  0) 
+@873970 ChrDC # c & tr.1s  #c=0 #t1=0                               01 (  1) 
+@873972 ChrDC # c & tr.1s  #c=0 #t1=0                               01 (  1) 
+@873974 ChrAC # c & tr.1s vlc=0 #c=0 #t1=0                           1 (  1) 
+@873975 ChrAC # c & tr.1s vlc=0 #c=0 #t1=0                           1 (  1) 
+@873976 ChrAC # c & tr.1s vlc=0 #c=0 #t1=0                           1 (  1) 
+@873977 ChrAC # c & tr.1s vlc=0 #c=0 #t1=0                           1 (  1) 
+@873978 ChrAC # c & tr.1s vlc=0 #c=0 #t1=0                           1 (  1) 
+@873979 ChrAC # c & tr.1s vlc=0 #c=1 #t1=1                          01 (  1) 
+@873981 ChrAC trailing ones sign (3,4)                               0 (  0) 
+@873982 ChrAC totalrun (3,4) vlc=0                                 011 (  3) 
+@873985 ChrAC # c & tr.1s vlc=0 #c=0 #t1=0                           1 (  1) 
+@873986 ChrAC # c & tr.1s vlc=0 #c=0 #t1=0                           1 (  1) """
+    bs = VerboseWrapper( BitStream( buf=binData("000010001 00100 011 00011 110 101 00 01 01 1 1 1 1 1 01 0 011 1 1 " ) ),
+        startOffset=2871689 ) # without skip
+    left = [[0, 0, 0, 0], [0, 0], [0, 0]]
+    up = [[0, 0, 0, 0], [0, 0], [0, 0]]
+    macroblockLayer( bs, left, up )
+    self.assertEqual( bs.worker.index, 873987-873940 )
+
 
 if __name__ == "__main__":
   setVerbose( False )
