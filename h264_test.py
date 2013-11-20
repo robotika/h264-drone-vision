@@ -506,6 +506,38 @@ class H264Test( unittest.TestCase ):
     self.assertEqual( bs.worker.index, 2871738- 2871690 )
 
 
+
+  def testMbType10( self ):
+    # frame0147.bin
+    """
+*********** POC: 4 (I/P) MB: 3426 Slice: 0 Type 0 **********
+@606828 mb_skip_run                                                  1 (  0) 
+@606829 mb_type                                                0001011 ( 10) 
+@606836 intra_chroma_pred_mode                                     011 (  2) 
+@606839 mb_qp_delta                                                  1 (  0) 
+@606840 Lum16DC # c & tr.1s vlc=0 #c=5 #t1=3                   0000100 (  4) 
+@606847 Lum16DC trailing ones sign (0,0)                           001 (  1) 
+@606850 Lum16DC lev (0,0) k=1 vlc=0                                 01 (  1) 
+@606852 Lum16DC lev (0,0) k=0 vlc=1                                 11 (  3) 
+@606854 Lum16DC totalrun (0,0) vlc=4                              0010 (  2) 
+@606858 Lum16DC run (4,0) k=4 vlc=6                               0001 (  1) 
+@606862 Lum16DC run (3,0) k=3 vlc=0                                  1 (  1) 
+@606863 Lum16DC run (2,0) k=2 vlc=0                                  1 (  1) 
+@606864 Lum16DC run (1,0) k=1 vlc=0                                  1 (  1) 
+@606865 ChrDC # c & tr.1s  #c=1 #t1=1                                1 (  1) 
+@606866 ChrDC trailing ones sign (0,0)                               1 (  1) 
+@606867 ChrDC totalrun (0,0) vlc=0                                   1 (  1) 
+@606868 ChrDC # c & tr.1s  #c=1 #t1=1                                1 (  1) 
+@606869 ChrDC trailing ones sign (0,0)                               0 (  0) 
+@606870 ChrDC totalrun (0,0) vlc=0                                   1 (  1) """
+    bs = VerboseWrapper( BitStream( buf=binData("0001011 011 1 0000100 001 01 11 0010 0001 1 1 1 1 1 1 1 0 1 " ) ),
+        startOffset=2871689 ) # without skip
+    left = [[0, 0, 0, 0], [0, 0], [0, 0]]
+    up = [[0, 0, 0, 0], [0, 0], [0, 0]]
+    macroblockLayer( bs, left, up, verbose=True )
+    self.assertEqual( bs.worker.index, 606871-606829 )
+
+
 if __name__ == "__main__":
   unittest.main() 
   

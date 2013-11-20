@@ -72,7 +72,7 @@ class BitStream:
     return None
 
 class VerboseWrapper:
-  def __init__( self, worker, startOffset=3064533-75 ):
+  def __init__( self, worker, startOffset=509867-75 ):
     self.worker = worker
     self.startOffset = startOffset
 
@@ -356,7 +356,7 @@ def macroblockLayer( bs, left, up, verbose=VERBOSE ):
     cbp = bs.golomb( "intra_chroma_pred_mode" ) # page 94
     bs.golomb( "mb_qp_delta" )
     noIdea = residual( bs, mix( left[0][0], up[0][0]) ) # Lum16DC - TODO proper nC/table selection
-    if mbType in [11, 12,13]:
+    if mbType in [10, 11, 12, 13]:
       bitPattern = 0x10
     elif mbType < 13:
       left = [[0]*4, [0]*2, [0]*2]
@@ -497,7 +497,8 @@ def parsePSlice( bs, fout, verbose=False ):
         else:         
           x = median(leftXY[0], upperXY[(mbIndex+mbi) % WIDTH][0], upperXY[1+ (mbIndex+mbi) % WIDTH][0])
           y = median(leftXY[1], upperXY[(mbIndex+mbi) % WIDTH][1], upperXY[1+ (mbIndex+mbi) % WIDTH][1])
-          fout.write("%d %d %d %d (skip)\n" % ( (mbIndex+mbi) % WIDTH, (mbIndex+mbi) / WIDTH, x, y ) )
+          if verbose:
+            fout.write("%d %d %d %d (skip)\n" % ( (mbIndex+mbi) % WIDTH, (mbIndex+mbi) / WIDTH, x, y ) )
         if (2+mbIndex+mbi) % WIDTH == 0:
           # backup [-2] element for UR element
           upperXY[-1] = upperXY[(mbIndex+mbi) % WIDTH]
@@ -522,8 +523,10 @@ def parsePSlice( bs, fout, verbose=False ):
     if mvd != (None,None):
       x = median(leftXY[0], upperXY[mbIndex % WIDTH][0], upperXY[1+ mbIndex % WIDTH][0]) + mvd[0]
       y = median(leftXY[1], upperXY[mbIndex % WIDTH][1], upperXY[1+ mbIndex % WIDTH][1]) + mvd[1]
-#      fout.write("%d %d %d %d\n" % ( mbIndex % WIDTH, mbIndex / WIDTH, x, y ) )
-      fout.write("%d %d %d %d (%d,%d)\n" % ( mbIndex % WIDTH, mbIndex / WIDTH, x, y, mvd[0], mvd[1] ) )
+      if verbose:
+        fout.write("%d %d %d %d (%d,%d)\n" % ( mbIndex % WIDTH, mbIndex / WIDTH, x, y, mvd[0], mvd[1] ) )
+      else:
+        fout.write("%d %d %d %d\n" % ( mbIndex % WIDTH, mbIndex / WIDTH, x, y ) )
     else:
       x,y = None, None
 #      fout.write("%d %d None None\n" % ( mbIndex % WIDTH, mbIndex / WIDTH ) )
