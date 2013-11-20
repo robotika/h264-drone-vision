@@ -2,13 +2,13 @@
 """
   Steps to understand H.264
   usage:
-       ./h264.py <frame>
+       ./h264.py [-v] <frame>
 """
 import sys
 import struct
 import os
 
-VERBOSE=False
+# VERBOSE=False # used "verbose" as global param now
 
 #NAL_HEADER = "".join([chr(x) for x in [0,0,0,1]])
 NAL_HEADER = [0,0,0,1]
@@ -174,10 +174,10 @@ def parsePPS( bs ):
   pps = [bs.alignedByte() for i in xrange(5)]
   assert pps == [0xce, 0x1, 0xa8, 0x77, 0x20], pps
 
-def residual( bs, nC, verbose=VERBOSE ):
+def residual( bs, nC ):
   "read residual block/data"
   # page 63, 7.4.5.3.1 Residual block CAVLC syntax
-  
+
   if verbose:
     print "-residual .. nC = %d" % nC
   # TotalCoef and TrailingOnes (page 177)
@@ -338,7 +338,7 @@ def mix( up, left ):
       return up
     return (left+up+1)/2
 
-def macroblockLayer( bs, left, up, verbose=VERBOSE ):
+def macroblockLayer( bs, left, up ):
   "input is BitStream, extra left column, and extra upper row"
   if verbose:
     print "macroblockLayer" # page 59
@@ -449,7 +449,7 @@ def median( a, b, c ):
   return sorted(tmp[:3])[1]
 
 
-def parsePSlice( bs, fout, verbose=False ):
+def parsePSlice( bs, fout ):
   print "P-slice"
   bs.golomb( "first_mb_in_slice" )
   bs.golomb( "slice_type" )
@@ -514,7 +514,7 @@ def parsePSlice( bs, fout, verbose=False ):
     if verbose:
       print "=============== MB:", mbIndex, "==============="
       print "UP", upperRow[mbIndex % WIDTH]
-    mvd, left, up = macroblockLayer( bs, left, upperRow[mbIndex % WIDTH], verbose=verbose )
+    mvd, left, up = macroblockLayer( bs, left, upperRow[mbIndex % WIDTH] )
     if verbose:
       print "LEFT/UP", mbIndex, left, up
     upperRow[mbIndex % WIDTH] = up
@@ -544,7 +544,7 @@ def parsePSlice( bs, fout, verbose=False ):
 #  sys.exit(0)
 
 
-def parseFrame( filename, verbose=VERBOSE ):
+def parseFrame( filename ):
   bs = BitStream( open(filename, "rb").read() )
   if verbose:
     bs = VerboseWrapper( bs )
@@ -562,7 +562,7 @@ def parseFrame( filename, verbose=VERBOSE ):
 #        try:
           fout.write( "Frame %d\n" % frameIndex )
           print "Frame %d\n" % frameIndex
-          parsePSlice( bs, fout, verbose=verbose )
+          parsePSlice( bs, fout )
           frameIndex += 1
 #        except:
 #          sys.stderr.write( "ERROR parsing P slice\n" )
@@ -596,8 +596,13 @@ if __name__ == "__main__":
   if len(sys.argv) < 2:
     print __doc__
     sys.exit(2)
+
+  global verbose
+  verbose = ( '-v' in sys.argv[1:] )
+  print "Verbose:", verbose
   for filename in sys.argv[1:]:
-    parseFrame( filename )
+    if filename != '-v':     
+      parseFrame( filename )
 #  path = sys.argv[1]
 #  for filename in os.listdir(path):
 #    if filename.startswith("video_rec"):
