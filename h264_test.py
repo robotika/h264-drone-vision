@@ -612,6 +612,80 @@ class H264Test( unittest.TestCase ):
     self.assertEqual( bs.worker.index, 873987-873940 )
 
 
+  def testMbType17( self ):
+    # frame0150.bin
+    """
+*********** POC: 10 (I/P) MB: 2704 Slice: 0 Type 0 **********
+@980878 mb_skip_run                                                  1 (  0) 
+@980879 mb_type                                              000010010 ( 17) 
+@980888 intra_chroma_pred_mode                                       1 (  0) 
+@980889 mb_qp_delta                                              00110 (  3) 
+@980894 Lum16DC # c & tr.1s vlc=0 #c=5 #t1=3                   0000100 (  4) 
+@980901 Lum16DC trailing ones sign (0,0)                           001 (  1) 
+@980904 Lum16DC lev (0,0) k=1 vlc=0                                  1 (  1) 
+@980905 Lum16DC lev (0,0) k=0 vlc=1                                 11 (  3) 
+@980907 Lum16DC totalrun (0,0) vlc=4                               111 (  7) 
+@980910 Lum16DC run (4,0) k=4 vlc=2                                 10 (  2) 
+@980912 Lum16DC run (3,0) k=3 vlc=1                                 01 (  1) 
+@980914 Lum16DC run (2,0) k=2 vlc=0                                  0 (  0) 
+@980915 ChrDC # c & tr.1s  #c=0 #t1=0                               01 (  1) 
+@980917 ChrDC # c & tr.1s  #c=1 #t1=1                                1 (  1) 
+@980918 ChrDC trailing ones sign (0,0)                               0 (  0) 
+@980919 ChrDC totalrun (0,0) vlc=0                                   1 (  1) 
+@980920 ChrAC # c & tr.1s vlc=0 #c=0 #t1=0                           1 (  1) 
+@980921 ChrAC # c & tr.1s vlc=0 #c=0 #t1=0                           1 (  1) 
+@980922 ChrAC # c & tr.1s vlc=0 #c=1 #t1=1                          01 (  1) 
+@980924 ChrAC trailing ones sign (0,5)                               1 (  1) 
+@980925 ChrAC totalrun (0,5) vlc=0                                   1 (  1) 
+@980926 ChrAC # c & tr.1s vlc=0 #c=0 #t1=0                           1 (  1) 
+@980927 ChrAC # c & tr.1s vlc=0 #c=0 #t1=0                           1 (  1) 
+@980928 ChrAC # c & tr.1s vlc=0 #c=0 #t1=0                           1 (  1) 
+@980929 ChrAC # c & tr.1s vlc=0 #c=0 #t1=0                           1 (  1) 
+@980930 ChrAC # c & tr.1s vlc=0 #c=0 #t1=0                           1 (  1) """
+    bs = VerboseWrapper( BitStream( buf=binData("000010010 1 00110 0000100 001 1 11 111 10 01 0 01 1 0 1 1 1 01 1 1 1 1 1 1 1 " ) ),
+        startOffset=2871689 ) # without skip
+    left = [[0, 0, 0, 0], [0, 0], [0, 0]]
+    up = [[0, 0, 0, 0], [0, 0], [0, 0]]
+    macroblockLayer( bs, left, up )
+    self.assertEqual( bs.worker.index, 980931-980879 )
+
+  def testMbType15( self ):
+    # frame0150.bin
+    """
+*********** POC: 10 (I/P) MB: 2871 Slice: 0 Type 0 **********
+@989455 mb_skip_run                                                  1 (  0) 
+@989456 mb_type                                              000010000 ( 15) 
+@989465 intra_chroma_pred_mode                                     010 (  1) 
+@989468 mb_qp_delta                                                  1 (  0) 
+@989469 Lum16DC # c & tr.1s vlc=0 #c=4 #t1=3                    000011 (  3) 
+@989475 Lum16DC trailing ones sign (0,0)                           111 (  7) 
+@989478 Lum16DC lev (0,0) k=0 vlc=0                                001 (  1) 
+@989481 Lum16DC totalrun (0,0) vlc=3                              0010 (  2) 
+@989485 Lum16DC run (3,0) k=3 vlc=6                                001 (  1) 
+@989488 Lum16DC run (2,0) k=2 vlc=2                                 11 (  3) 
+@989490 Lum16DC run (1,0) k=1 vlc=2                                 00 (  0) 
+@989492 ChrDC # c & tr.1s  #c=2 #t1=2                              001 (  1) 
+@989495 ChrDC trailing ones sign (0,0)                              01 (  1) 
+@989497 ChrDC totalrun (0,0) vlc=1                                  01 (  1) 
+@989499 ChrDC run (1,0) k=1 vlc=0                                    0 (  0) 
+@989500 ChrDC # c & tr.1s  #c=0 #t1=0                               01 (  1) 
+@989502 ChrAC # c & tr.1s vlc=0 #c=0 #t1=0                           1 (  1) 
+@989503 ChrAC # c & tr.1s vlc=0 #c=1 #t1=1                          01 (  1) 
+@989505 ChrAC trailing ones sign (1,4)                               0 (  0) 
+@989506 ChrAC totalrun (1,4) vlc=0                                 011 (  3) 
+@989509 ChrAC # c & tr.1s vlc=0 #c=0 #t1=0                           1 (  1) 
+@989510 ChrAC # c & tr.1s vlc=0 #c=0 #t1=0                           1 (  1) 
+@989511 ChrAC # c & tr.1s vlc=0 #c=0 #t1=0                           1 (  1) 
+@989512 ChrAC # c & tr.1s vlc=0 #c=0 #t1=0                           1 (  1) 
+@989513 ChrAC # c & tr.1s vlc=0 #c=0 #t1=0                           1 (  1) 
+@989514 ChrAC # c & tr.1s vlc=0 #c=0 #t1=0                           1 (  1) """
+    bs = VerboseWrapper( BitStream( buf=binData("000010000 010 1 000011 111 001 0010 001 11 00 001 01 01 0 01 1 01 0 011 1 1 1 1 1 1 " ) ),
+        startOffset=2871689 ) # without skip
+    left = [[0, 0, 0, 0], [0, 0], [0, 0]]
+    up = [[0, 0, 0, 0], [0, 0], [0, 0]]
+    macroblockLayer( bs, left, up )
+    self.assertEqual( bs.worker.index, 989515-989456 )
+
 if __name__ == "__main__":
   setVerbose( False )
   unittest.main() 
