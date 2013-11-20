@@ -169,7 +169,7 @@ class H264Test( unittest.TestCase ):
     left = [[None]*4, [None]*2, [None]*2]
     up = [[None]*4, [None]*2, [None]*2]
     print "testLum16DC START"
-    macroblockLayer( bs, left, up, verbose=True )
+    macroblockLayer( bs, left, up )
     print "testLum16DC END"
     self.assertEqual( bs.worker.index, 1184191-1184158 )
 
@@ -192,7 +192,7 @@ class H264Test( unittest.TestCase ):
     left = [[None]*4, [None]*2, [None]*2]
     up = [[None]*4, [None]*2, [None]*2]
     print "testLum16DC START"
-    macroblockLayer( bs, left, up, verbose=True )
+    macroblockLayer( bs, left, up )
     print "testLum16DC END"
     self.assertEqual( bs.worker.index, 1198158-1198124 )
 
@@ -233,7 +233,7 @@ class H264Test( unittest.TestCase ):
         startOffset=1211251 ) # without skip
     left = [[None]*4, [None]*2, [None]*2]
     up = [[None]*4, [None]*2, [None]*2]
-    macroblockLayer( bs, left, up, verbose=True )
+    macroblockLayer( bs, left, up )
     self.assertEqual( bs.worker.index, 1211307-1211251 )
     print "Lum16AC END"
 
@@ -278,7 +278,7 @@ class H264Test( unittest.TestCase ):
         startOffset=1283941 ) # without skip
     left = [[None]*4, [None]*2, [None]*2]
     up = [[None]*4, [None]*2, [None]*2]
-    macroblockLayer( bs, left, up, verbose=True )
+    macroblockLayer( bs, left, up )
     self.assertEqual( bs.worker.index, 1284001-1283941 )
     print "Lum16ACDC END"
 
@@ -334,7 +334,7 @@ class H264Test( unittest.TestCase ):
     left = [[0, 0, 0, 3], [0, 0], [0, 0]]
     up = [[0, 0, 0, 0], [0, 0], [0, 0]] # maybe it is not correct??
     # mb_type 18 = I_16x16_1_1_1 Intra_16x16  1  1  15
-    macroblockLayer( bs, left, up, verbose=True )
+    macroblockLayer( bs, left, up )
     self.assertEqual( bs.worker.index, 1286024-1285940 )
     print "Lum16AC-2 END"
 
@@ -388,7 +388,7 @@ class H264Test( unittest.TestCase ):
     left = [[0, 0, 0, 0], [0, 0], [0, 0]]
     up = [[3, 0, 0, 0], [0, 0], [0, 0]] # maybe it is not correct??
     # mb_type 18 = I_16x16_1_1_1 Intra_16x16  1  1  15
-    macroblockLayer( bs, left, up, verbose=True )
+    macroblockLayer( bs, left, up )
     self.assertEqual( bs.worker.index, 4601846-4601751 )
 
   def testMbType26( self ):
@@ -472,7 +472,7 @@ class H264Test( unittest.TestCase ):
         startOffset=2429881 ) # without skip
     left = [[0, 0, 0, 0], [0, 0], [0, 0]]
     up = [[0, 0, 0, 0], [0, 0], [0, 0]]
-    macroblockLayer( bs, left, up, verbose=True )
+    macroblockLayer( bs, left, up )
     self.assertEqual( bs.worker.index, 2430034-2429881 )
   
   def testMbType12( self ):
@@ -502,7 +502,7 @@ class H264Test( unittest.TestCase ):
         startOffset=2871689 ) # without skip
     left = [[0, 0, 0, 0], [0, 0], [0, 0]]
     up = [[0, 0, 0, 0], [0, 0], [0, 0]]
-    macroblockLayer( bs, left, up, verbose=True )
+    macroblockLayer( bs, left, up )
     self.assertEqual( bs.worker.index, 2871738- 2871690 )
 
 
@@ -534,10 +534,54 @@ class H264Test( unittest.TestCase ):
         startOffset=2871689 ) # without skip
     left = [[0, 0, 0, 0], [0, 0], [0, 0]]
     up = [[0, 0, 0, 0], [0, 0], [0, 0]]
-    macroblockLayer( bs, left, up, verbose=True )
+    macroblockLayer( bs, left, up )
     self.assertEqual( bs.worker.index, 606871-606829 )
 
 
+  def testMbType14( self ):
+    # frame0148.bin
+    """
+*********** POC: 6 (I/P) MB: 2613 Slice: 0 Type 0 **********
+@707572 mb_skip_run                                                  1 (  0) 
+@707573 mb_type                                                0001111 ( 14) 
+@707580 intra_chroma_pred_mode                                     010 (  1) 
+@707583 mb_qp_delta                                              00100 (  2) 
+@707588 Lum16DC # c & tr.1s vlc=0 #c=8 #t1=3                0000000100 (  4) 
+@707598 Lum16DC trailing ones sign (0,0)                           001 (  1) 
+@707601 Lum16DC lev (0,0) k=4 vlc=0                                  1 (  1) 
+@707602 Lum16DC lev (0,0) k=3 vlc=1                                 10 (  2) 
+@707604 Lum16DC lev (0,0) k=2 vlc=1                                 10 (  2) 
+@707606 Lum16DC lev (0,0) k=1 vlc=1                                 10 (  2) 
+@707608 Lum16DC lev (0,0) k=0 vlc=1                                011 (  3) 
+@707611 Lum16DC totalrun (0,0) vlc=7                                10 (  2) 
+@707613 Lum16DC run (7,0) k=7 vlc=4                                011 (  3) 
+@707616 Lum16DC run (6,0) k=6 vlc=2                                 10 (  2) 
+@707618 Lum16DC run (5,0) k=5 vlc=1                                 01 (  1) 
+@707620 Lum16DC run (4,0) k=4 vlc=0                                  1 (  1) 
+@707621 Lum16DC run (3,0) k=3 vlc=0                                  0 (  0) 
+@707622 ChrDC # c & tr.1s  #c=1 #t1=1                                1 (  1) 
+@707623 ChrDC trailing ones sign (0,0)                               0 (  0) 
+@707624 ChrDC totalrun (0,0) vlc=0                                  01 (  1) 
+@707626 ChrDC # c & tr.1s  #c=0 #t1=0                               01 (  1) 
+@707628 ChrAC # c & tr.1s vlc=0 #c=0 #t1=0                           1 (  1) 
+@707629 ChrAC # c & tr.1s vlc=0 #c=0 #t1=0                           1 (  1) 
+@707630 ChrAC # c & tr.1s vlc=0 #c=0 #t1=0                           1 (  1) 
+@707631 ChrAC # c & tr.1s vlc=0 #c=1 #t1=1                          01 (  1) 
+@707633 ChrAC trailing ones sign (1,5)                               0 (  0) 
+@707634 ChrAC totalrun (1,5) vlc=0                                   1 (  1) 
+@707635 ChrAC # c & tr.1s vlc=0 #c=0 #t1=0                           1 (  1) 
+@707636 ChrAC # c & tr.1s vlc=0 #c=0 #t1=0                           1 (  1) 
+@707637 ChrAC # c & tr.1s vlc=0 #c=0 #t1=0                           1 (  1) 
+@707638 ChrAC # c & tr.1s vlc=0 #c=0 #t1=0                           1 (  1) """
+    bs = VerboseWrapper( BitStream( buf=binData("0001111 010 00100 0000000100 001 1 10 10 10 011 10 011 10 01 1 0 1 0 01 01 1 1 1 01 0 1 1 1 1 1 " ) ),
+        startOffset=2871689 ) # without skip
+    left = [[0, 0, 0, 0], [0, 0], [0, 0]]
+    up = [[0, 0, 0, 0], [0, 0], [0, 0]]
+    macroblockLayer( bs, left, up )
+    self.assertEqual( bs.worker.index, 707639-707573 )
+
+
 if __name__ == "__main__":
+  setVerbose( False )
   unittest.main() 
   

@@ -8,7 +8,9 @@ import sys
 import struct
 import os
 
-# VERBOSE=False # used "verbose" as global param now
+def setVerbose( val ):
+  global verbose
+  verbose = val
 
 #NAL_HEADER = "".join([chr(x) for x in [0,0,0,1]])
 NAL_HEADER = [0,0,0,1]
@@ -72,7 +74,7 @@ class BitStream:
     return None
 
 class VerboseWrapper:
-  def __init__( self, worker, startOffset=509867-75 ):
+  def __init__( self, worker, startOffset=613754-75 ):
     self.worker = worker
     self.startOffset = startOffset
 
@@ -365,6 +367,8 @@ def macroblockLayer( bs, left, up ):
     else:
       # for larger fake bit pattern
       bitPattern = 0xF
+    if mbType in [14]:
+      bitPattern = 0x20
     if mbType in [22, 23, 24, 25]:
       bitPattern = 0x1F
     if mbType in [26, 27, 28, 29]: # frame 137, did not expect this type
@@ -597,8 +601,7 @@ if __name__ == "__main__":
     print __doc__
     sys.exit(2)
 
-  global verbose
-  verbose = ( '-v' in sys.argv[1:] )
+  setVerbose( '-v' in sys.argv[1:] )
   print "Verbose:", verbose
   for filename in sys.argv[1:]:
     if filename != '-v':     
