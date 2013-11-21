@@ -74,7 +74,7 @@ class BitStream:
     return None
 
 class VerboseWrapper:
-  def __init__( self, worker, startOffset=916118-75 ):
+  def __init__( self, worker, startOffset=968568-77 ):
     self.worker = worker
     self.startOffset = startOffset
 
@@ -251,6 +251,7 @@ def residual( bs, nC ):
       '000000000000 001':14, '0000000000000001':15 } # Tab 9-6, page 180
     #  not found, only parallel implementation http://etrij.etri.re.kr/Cyber/Download/PublishedPaper/3105/etrij.oct2009.0510.pdf  
   levelTwoOrHigher = (totalCoeff <= 3 or trailing1s != 3)
+  levelLimits = [0, 3, 6, 12, 24, 48, 32768]
   for i in xrange(totalCoeff):
     if i < trailing1s:
       bs.bit( "sign bit" )
@@ -274,10 +275,8 @@ def residual( bs, nC ):
         if absLevel > 3:
           levelVLC = 2
       else:
-        if levelVLC == 2 and absLevel > 6:
-          assert False, "NOT (YET) SUPPORTED LEVEL level=%d prefix=%d" % (levelVLC, levelPrefix)
-        if absLevel > 3:
-          levelVLC = 2
+        if absLevel > levelLimits[levelVLC]:
+          levelVLC += 1
       #, "suffix", bs.bits(levelPrefix) # it is again complex - see page 179
   if totalCoeff == 0 or totalCoeff == 16 or (totalCoeff == 4 and nC==-1):
     return totalCoeff
