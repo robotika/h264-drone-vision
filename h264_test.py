@@ -162,11 +162,26 @@ class H264Test( unittest.TestCase ):
     """ frame0187.bin MB: 24
 @1365333 Luma # c & tr.1s vlc=1 #c=1 #t1=0                      001011 ( 11) 
 @1365339 Luma lev (0,0) k=0 vlc=0                      0000000000000010001 ( 17) 
-@1365358 Luma totalrun (0,0) vlc=0                                   1 (  1) 
-"""
+@1365358 Luma totalrun (0,0) vlc=0                                   1 (  1) """
     bs = BitStream( buf=binData("001011 0000000000000010001 1" ) )
     self.assertEqual( residual( bs, nC=2 ), 1 )
     self.assertEqual( bs.index, 1365359-1365333 )   
+
+  def testLevelTabs4( self ):
+    """ frame0228.bin MB: 30
+@2742801 Luma # c & tr.1s vlc=2 #c=6 #t1=3                        1001 (  9) 
+@2742805 Luma trailing ones sign (3,0)                             111 (  7) 
+@2742808 Luma lev (3,0) k=2 vlc=0                      0000000000000010010 ( 18) 
+@2742827 Luma lev (3,0) k=1 vlc=2                                  110 (  6) 
+@2742830 Luma lev (3,0) k=0 vlc=2                              0000100 (  4) 
+@2742837 Luma totalrun (3,0) vlc=5                                 110 (  6) 
+@2742840 Luma run (5,0) k=5 vlc=2                                   11 (  3) 
+@2742842 Luma run (4,0) k=4 vlc=2                                   10 (  2) 
+@2742844 Luma run (3,0) k=3 vlc=1                                   00 (  0) """
+    bs = BitStream( buf=binData("1001 111 0000000000000010010 110 0000100 110 11 10 00" ) )
+    self.assertEqual( residual( bs, nC=7 ), 6 )
+    self.assertEqual( bs.index, 2742846-2742801 )   
+
 
   def testMedian( self ):
     self.assertEqual( median( None, None, None), 0 )
