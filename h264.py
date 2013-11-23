@@ -75,7 +75,7 @@ class BitStream:
     return None
 
 class VerboseWrapper:
-  def __init__( self, worker, startOffset=2740405-75 ):
+  def __init__( self, worker, startOffset=1998227-75 ):
     self.worker = worker
     self.startOffset = startOffset
 
@@ -257,7 +257,7 @@ def residual( bs, nC ):
     if i < trailing1s:
       bs.bit( "sign bit" )
     else:
-      levelPrefix = bs.tab( levelMapping,  maxBits=15, info="levelPrefix" )
+      levelPrefix = bs.tab( levelMapping,  maxBits=16, info="levelPrefix" )
       levelSuffixSize = levelVLC
       if levelPrefix == 14 and levelVLC == 0: # page 179
         levelSuffixSize = 4
