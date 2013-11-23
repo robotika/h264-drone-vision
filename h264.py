@@ -69,7 +69,8 @@ class BitStream:
 #        print key
         return table[key]
     print "EXIT", key, table
-    sys.exit()
+    #sys.exit()
+    raise Exception( "Table error" )
 
     return None
 
@@ -454,7 +455,8 @@ def median( a, b, c ):
 
 
 def parsePSlice( bs, fout ):
-  print "P-slice"
+  ret = []
+#  print "P-slice"
   bs.golomb( "first_mb_in_slice" )
   bs.golomb( "slice_type" )
   bs.golomb( "pic_parameter_set_id" )
@@ -501,7 +503,7 @@ def parsePSlice( bs, fout ):
         else:         
           x = median(leftXY[0], upperXY[(mbIndex+mbi) % WIDTH][0], upperXY[1+ (mbIndex+mbi) % WIDTH][0])
           y = median(leftXY[1], upperXY[(mbIndex+mbi) % WIDTH][1], upperXY[1+ (mbIndex+mbi) % WIDTH][1])
-          if verbose:
+          if verbose and fout != None:
             fout.write("%d %d %d %d (skip)\n" % ( (mbIndex+mbi) % WIDTH, (mbIndex+mbi) / WIDTH, x, y ) )
         if (2+mbIndex+mbi) % WIDTH == 0:
           # backup [-2] element for UR element
@@ -527,15 +529,17 @@ def parsePSlice( bs, fout ):
     if mvd != (None,None):
       x = median(leftXY[0], upperXY[mbIndex % WIDTH][0], upperXY[1+ mbIndex % WIDTH][0]) + mvd[0]
       y = median(leftXY[1], upperXY[mbIndex % WIDTH][1], upperXY[1+ mbIndex % WIDTH][1]) + mvd[1]
-      if verbose:
-        fout.write("%d %d %d %d (%d,%d)\n" % ( mbIndex % WIDTH, mbIndex / WIDTH, x, y, mvd[0], mvd[1] ) )
-      else:
-        fout.write("%d %d %d %d\n" % ( mbIndex % WIDTH, mbIndex / WIDTH, x, y ) )
+      ret.append( ( mbIndex % WIDTH, mbIndex / WIDTH, x, y ) )
+      if fout != None:
+        if verbose:
+          fout.write("%d %d %d %d (%d,%d)\n" % ( mbIndex % WIDTH, mbIndex / WIDTH, x, y, mvd[0], mvd[1] ) )
+        else:
+          fout.write("%d %d %d %d\n" % ( mbIndex % WIDTH, mbIndex / WIDTH, x, y ) )
+        fout.flush()
     else:
       x,y = None, None
 #      fout.write("%d %d None None\n" % ( mbIndex % WIDTH, mbIndex / WIDTH ) )
 
-    fout.flush()
     leftXY = x, y
     if (2+mbIndex) % WIDTH == 0:
       # backup [-2] element for UR element
@@ -544,11 +548,39 @@ def parsePSlice( bs, fout ):
     mbIndex += 1
   if verbose:
     print "THE END"
-  fout.flush()
-#  sys.exit(0)
+  return ret
+
+def parseFrameInner( buf ):
+  "return list of macroblock movements, None=failure"
+  bs = BitStream( buf )
+  if verbose:
+    bs = VerboseWrapper( bs )
+  if [bs.alignedByte() for i in [0,1,2,3]] != NAL_HEADER:
+    return None
+  c = bs.alignedByte()
+  if c & 0x1F != 1:
+    return []
+  ret = parsePSlice( bs, None )
+  if bs.index/8 == len(buf) or bs.index/8+1 == len(buf):
+    # it is not clear how the end bytes are aligned :(
+    return ret
+  print bs.index/8, len(buf),  bs.index % 8
+  return None
+
+def parseFrame( buf ):
+  try:
+    ret = parseFrameInner( buf )
+  except KeyboardInterrupt as e:
+    raise e
+  except:
+    return None
+  return ret
 
 
-def parseFrame( filename ):
+def parseFrames( filename ):
+  print "FRAME", parseFrame( open(filename, "rb").read() )
+
+def parseFramesOld( filename ):
   bs = BitStream( open(filename, "rb").read() )
   if verbose:
     bs = VerboseWrapper( bs )
@@ -596,6 +628,20 @@ def parseFrame( filename ):
     header = header[1:] + [c]
   fout.close()
 
+
+def functionalTest( path, prefix="frame" ):
+  err, count = 0, 0
+  for filename in os.listdir(path):
+    if filename.startswith( prefix ):
+      mv = parseFrame( open(path + os.sep + filename, "rb").read() )
+      count += 1
+      if mv == None:
+        print filename, "None"
+        err += 1
+      else:
+        print filename, len(mv)
+  return err,count
+
 if __name__ == "__main__":
   if len(sys.argv) < 2:
     print __doc__
@@ -603,12 +649,10 @@ if __name__ == "__main__":
 
   setVerbose( '-v' in sys.argv[1:] )
   print "Verbose:", verbose
-  for filename in sys.argv[1:]:
-    if filename != '-v':     
-      parseFrame( filename )
-#  path = sys.argv[1]
-#  for filename in os.listdir(path):
-#    if filename.startswith("video_rec"):
-#      parseFrame( path + os.sep + filename )
-
+  if '-f' == sys.argv[1]:
+    print functionalTest( path = sys.argv[2] )
+  else:
+    for filename in sys.argv[1:]:
+      if filename != '-v':     
+        parseFrames( filename )
 
