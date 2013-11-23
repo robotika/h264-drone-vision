@@ -556,12 +556,17 @@ def parseFrameInner( buf ):
   if verbose:
     bs = VerboseWrapper( bs )
   if [bs.alignedByte() for i in [0,1,2,3]] != NAL_HEADER:
+    print "HEADER"
     return None
   c = bs.alignedByte()
   if c & 0x1F != 1:
     return []
   ret = parsePSlice( bs, None )
-  if bs.index/8 == len(buf) or bs.index/8+1 == len(buf):
+  if verbose:
+    index = bs.worker.index # :-(
+  else:
+    index = bs.index
+  if index/8 == len(buf) or index/8+1 == len(buf):
     # it is not clear how the end bytes are aligned :(
     return ret
   print bs.index/8, len(buf),  bs.index % 8
@@ -572,7 +577,8 @@ def parseFrame( buf ):
     ret = parseFrameInner( buf )
   except KeyboardInterrupt as e:
     raise e
-  except:
+  except Exception as e:
+    print str(e)
     return None
   return ret
 
