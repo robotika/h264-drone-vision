@@ -741,6 +741,42 @@ class H264Test( unittest.TestCase ):
     macroblockLayer( bs, left, up )
     self.assertEqual( bs.worker.index, 989515-989456 )
 
+
+  def testDCError( self ):
+    # frame0380.bin - this was in reality problem due to unhandled ESCAPE sequence
+    """
+*********** POC: 50 (I/P) MB: 244 Slice: 0 Type 0 **********
+@3584943 mb_skip_run                                                 1 (  0) 
+@3584944 mb_type                                                     1 (  0) 
+@3584945 mvd0_l0                                           00000100000 ( 16) 
+@3584956 mvd1_l0                                                     1 (  0) 
+@3584957 coded_block_pattern                               00000100011 ( 20) 
+@3584968 mb_qp_delta                                             00101 ( -2) 
+@3584973 Luma # c & tr.1s vlc=0 #c=1 #t1=1                          01 (  1) 
+@3584975 Luma trailing ones sign (0,2)                               1 (  1) 
+@3584976 Luma totalrun (0,2) vlc=0                                   1 (  1) 
+@3584977 Luma # c & tr.1s vlc=0 #c=0 #t1=0                           1 (  1) 
+@3584978 Luma # c & tr.1s vlc=0 #c=1 #t1=1                          01 (  1) 
+@3584980 Luma trailing ones sign (0,3)                               1 (  1) 
+@3584981 Luma totalrun (0,3) vlc=0                                 011 (  3) 
+@3584984 Luma # c & tr.1s vlc=0 #c=1 #t1=1                          01 (  1) 
+@3584986 Luma trailing ones sign (1,3)                               0 (  0) 
+@3584987 Luma totalrun (1,3) vlc=0                                   1 (  1) 
+@3584988 ChrDC # c & tr.1s  #c=4 #t1=3                         0000000 (  0) 
+@3584995 ChrDC trailing ones sign (0,0)                            000 (  0) 
+@3584998 ChrDC lev (0,0) k=0 vlc=0                      00000000000001 (  1) 
+@3585012 ChrDC # c & tr.1s  #c=0 #t1=0                              01 (  1) """
+    bs = VerboseWrapper( BitStream( buf=binData("1 00000100000 1 00000100011 00101 01 1 1 1 01 1 011 01 0 1 0000000 000 00000000000001 01 " ) ),
+        startOffset=3584944 ) # without skip
+    left = [[0, 0, 0, 0], [0, 1], [0, 0]]
+    up = [[0, 0, 0, 1], [0, 0], [0, 0]]
+    macroblockLayer( bs, left, up )
+    self.assertEqual( bs.worker.index, 3585014-3584944 )
+
+  def testRemoveEscape( self ):
+    buf = "".join( [chr(x) for x in [0x04, 0x65, 0x7B, 0x6A, 0x00, 0x00, 0x03, 0x02, 0xE0, 0xD0, 0x0A]] )
+    self.assertEqual( removeEscape( buf ), "".join( [chr(x) for x in [0x04, 0x65, 0x7B, 0x6A, 0x00, 0x00, 0x02, 0xE0, 0xD0, 0x0A]] ) )
+
 if __name__ == "__main__":
   setVerbose( False )
   unittest.main() 

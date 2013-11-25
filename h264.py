@@ -75,7 +75,7 @@ class BitStream:
     return None
 
 class VerboseWrapper:
-  def __init__( self, worker, startOffset=1998227-75 ):
+  def __init__( self, worker, startOffset=3571530-77 ):
     self.worker = worker
     self.startOffset = startOffset
 
@@ -127,6 +127,10 @@ class VerboseWrapper:
     howMany = self.worker.index - addr
     self.printInfo( addr, "tab(%d) " % howMany + str( ret ), info )
     return ret
+
+def removeEscape( buf ):
+  "remove aligned 00 00 03 from the stream"
+  return buf.replace( "\x00\x00\x03", "\x00\x00" )
 
 
 def parseISlice( bs ):
@@ -552,7 +556,7 @@ def parsePSlice( bs, fout ):
 
 def parseFrameInner( buf ):
   "return list of macroblock movements, None=failure"
-  bs = BitStream( buf )
+  bs = BitStream( removeEscape( buf ) )
   if verbose:
     bs = VerboseWrapper( bs )
   if [bs.alignedByte() for i in [0,1,2,3]] != NAL_HEADER:
