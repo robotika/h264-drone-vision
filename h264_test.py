@@ -777,6 +777,13 @@ class H264Test( unittest.TestCase ):
     buf = "".join( [chr(x) for x in [0x04, 0x65, 0x7B, 0x6A, 0x00, 0x00, 0x03, 0x02, 0xE0, 0xD0, 0x0A]] )
     self.assertEqual( removeEscape( buf ), "".join( [chr(x) for x in [0x04, 0x65, 0x7B, 0x6A, 0x00, 0x00, 0x02, 0xE0, 0xD0, 0x0A]] ) )
 
+
+  def testDroneSPS( self ):
+    bs = BitStream( buf = "".join( [chr(x) for x in [0x42, 0x80, 0x1f, 0x8b, 0x68, 0x5, 0x0, 0x5b, 0x10]] ) )
+    self.assertEqual( bs.bits(8), 66 ) # profileIdc ... 66 = Baseline profile
+    bs.bits(8) # flag set 012
+    self.assertEqual( bs.bits(8), 31 ) # level
+
 if __name__ == "__main__":
   setVerbose( False )
   unittest.main() 
