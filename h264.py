@@ -591,7 +591,7 @@ def parseFrames( filename ):
   print "FRAME", parseFrame( open(filename, "rb").read() )
 
 def parseFramesOld( filename ):
-  bs = BitStream( open(filename, "rb").read() )
+  bs = BitStream( removeEscape( open(filename, "rb").read()) )
   if verbose:
     bs = VerboseWrapper( bs )
   frameIndex = 0
