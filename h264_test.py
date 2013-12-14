@@ -795,6 +795,15 @@ class H264Test( unittest.TestCase ):
     self.assertEqual( bs.gen.next(), 0 )
 
 
+  def testBitAutomat( self ):
+    bs = BitStream( buf = "\x5F" )
+    tab = { '01':0, '00':1, '1':2 }
+    automat = makeAutomat( tab )
+    self.assertEqual( bs.bitAutomat( automat ), 0 )
+    self.assertEqual( bs.bitAutomat( automat ), 0 )
+    self.assertEqual( bs.bitAutomat( automat ), 2 )
+
+
 if __name__ == "__main__":
   setVerbose( False )
   unittest.main() 

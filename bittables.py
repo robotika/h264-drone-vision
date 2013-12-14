@@ -1,5 +1,7 @@
 from array import array
 from random import randint,seed
+import types
+
 
 coefTokenMapping01 = { '1':(0,0), '000101':(0,1), '01':(1,1), '00000111':(0,2), '000100':(1,2), '001':(2,2),
     '000000111':(0,3), '00000110':(1,3), '0000101':(2,3), '00011':(3,3), '0000000111':(0,4), '000000110':(1,4),
@@ -107,7 +109,7 @@ def makeAutomat(mapping):
     """
     automat=array('i',[-1,-1])
     results=array('i')
-    for bits, (d1,d2) in mapping.iteritems():
+    for bits, val in mapping.iteritems():
         state=0
         #make state  transfer for all but last bit
         for bit in bits[:-1]:
@@ -120,8 +122,11 @@ def makeAutomat(mapping):
         #make last bit link to endstates table
         bit=int(bits[-1])
         assert automat[state|bit]==-1
-        automat[state|bit]=len(results)|1
-        results.extend([d1,d2])
+        automat[state|bit] = 2*len(results) + 1
+        if type(val) == types.TupleType:
+          results.extend( val )
+        else:
+          results.append( val )
     return automat, results
 
 def bitGeneratorWithGlobalCount(data, offset=0):
@@ -185,3 +190,4 @@ if __name__=="__main__":
             res.append((endstates[state-1],endstates[state]))
             print res[-1]
             state=0
+

@@ -22,6 +22,13 @@ HEIGHT = 45
 from bittables import coefTokenMapping01, coefTokenMapping23, coefTokenMapping4567, coefTokenMapping8andUp, coefTokenMappingOther
 from bittables import levelMapping, runBeforeMapping, totalZerosMappingDC, totalZerosMapping
 
+from bittables import makeAutomat
+
+# experiment
+levelMapping = makeAutomat( levelMapping )
+
+
+
 class BitStream:
   def __init__( self, buf="" ):
     self.buf = buf
@@ -87,6 +94,16 @@ class BitStream:
 
     return None
 
+  def bitAutomat( self, automat, maxBits=32, info=None ): # maxBits and info just for compatibility with tab call
+    "future replacement of tab"
+    (mapTable, endstates) = automat
+    state = 0
+    while True:
+      bit = self.bit()
+      state = mapTable[state | bit]
+      if state & 1:
+        return endstates[state/2]
+
 class VerboseWrapper:
   def __init__( self, worker, startOffset=3571530-77 ):
     self.worker = worker
@@ -140,6 +157,14 @@ class VerboseWrapper:
     howMany = self.worker.index - addr
     self.printInfo( addr, "tab(%d) " % howMany + str( ret ), info )
     return ret
+
+  def bitAutomat( self, table, maxBits=32, info=None ):
+    addr = self.worker.index
+    ret = self.worker.bitAutomat( table, maxBits )
+    howMany = self.worker.index - addr
+    self.printInfo( addr, "tab(%d) " % howMany + str( ret ), info )
+    return ret
+
 
 def removeEscape( buf ):
   "remove aligned 00 00 03 from the stream"
@@ -227,7 +252,8 @@ def residual( bs, nC ):
     if i < trailing1s:
       bs.bit( "sign bit" )
     else:
-      levelPrefix = bs.tab( levelMapping,  maxBits=16, info="levelPrefix" )
+#experiment      levelPrefix = bs.tab( levelMapping,  maxBits=16, info="levelPrefix" )
+      levelPrefix = bs.bitAutomat( levelMapping, info="levelPrefix" )
       levelSuffixSize = levelVLC
       if levelPrefix == 14 and levelVLC == 0: # page 179
         levelSuffixSize = 4
