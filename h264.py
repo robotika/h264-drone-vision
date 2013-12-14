@@ -7,6 +7,7 @@
 import sys
 import struct
 import os
+import types
 
 def setVerbose( val ):
   global verbose
@@ -25,9 +26,19 @@ from bittables import levelMapping, runBeforeMapping, totalZerosMappingDC, total
 from bittables import makeAutomat
 
 # experiment
+coefTokenMapping01 = makeAutomat( coefTokenMapping01 )
+coefTokenMapping23 = makeAutomat( coefTokenMapping23 )
+coefTokenMapping4567 = makeAutomat( coefTokenMapping4567 )
+coefTokenMapping8andUp = makeAutomat( coefTokenMapping8andUp )
+coefTokenMappingOther = makeAutomat( coefTokenMappingOther )
 levelMapping = makeAutomat( levelMapping )
-
-
+for k in runBeforeMapping.keys():
+  runBeforeMapping[k] = makeAutomat( runBeforeMapping[k] )
+for k in totalZerosMappingDC.keys():
+  totalZerosMappingDC[k] = makeAutomat( totalZerosMappingDC[k] )
+for k in totalZerosMapping.keys():
+  totalZerosMapping[k] = makeAutomat( totalZerosMapping[k] )
+# end of experiment
 
 class BitStream:
   def __init__( self, buf="" ):
@@ -82,6 +93,8 @@ class BitStream:
 
   def tab( self, table, maxBits=32, info=None ):
     "ce(v): context-adaptive variable-length entropy-coded syntax element"
+    if type(table) != types.DictType:
+      return self.bitAutomat( table, maxBits, info )
     key = ''
     for i in xrange(maxBits):
       key += str(self.bit())
@@ -96,13 +109,18 @@ class BitStream:
 
   def bitAutomat( self, automat, maxBits=32, info=None ): # maxBits and info just for compatibility with tab call
     "future replacement of tab"
-    (mapTable, endstates) = automat
+    (mapTable, endstates, lenVal) = automat
     state = 0
     while True:
       bit = self.bit()
       state = mapTable[state | bit]
       if state & 1:
-        return endstates[state/2]
+        if lenVal == 1:
+          return endstates[state/2]
+        elif lenVal == 2:
+          return (endstates[state/2], endstates[state/2+1])
+        else:
+          assert False, str(automat) # not supported
 
 class VerboseWrapper:
   def __init__( self, worker, startOffset=3571530-77 ):
@@ -252,8 +270,7 @@ def residual( bs, nC ):
     if i < trailing1s:
       bs.bit( "sign bit" )
     else:
-#experiment      levelPrefix = bs.tab( levelMapping,  maxBits=16, info="levelPrefix" )
-      levelPrefix = bs.bitAutomat( levelMapping, info="levelPrefix" )
+      levelPrefix = bs.tab( levelMapping,  maxBits=16, info="levelPrefix" )
       levelSuffixSize = levelVLC
       if levelPrefix == 14 and levelVLC == 0: # page 179
         levelSuffixSize = 4

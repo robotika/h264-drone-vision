@@ -125,9 +125,11 @@ def makeAutomat(mapping):
         automat[state|bit] = 2*len(results) + 1
         if type(val) == types.TupleType:
           results.extend( val )
+          lenVal = len(val)
         else:
           results.append( val )
-    return automat, results
+          lenVal = 1
+    return automat, results, lenVal
 
 def bitGeneratorWithGlobalCount(data, offset=0):
     global Count
