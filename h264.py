@@ -26,28 +26,35 @@ class BitStream:
   def __init__( self, buf="" ):
     self.buf = buf
     self.index = 0
+    self.gen = self.bitG()
+
+  def bitG( self ):
+    for x in self.buf:
+      byte = ord(x)
+      mask = 0x80
+      while mask > 0:
+        yield int((byte & mask) != 0) # what is the fastest solution??
+        mask = mask >> 1
 
   def bit( self, info=None ):
-    if ord(self.buf[self.index/8]) & 0x80>> (self.index%8):
-      ret = 1
-    else:
-      ret = 0
     self.index += 1
-    return ret
+    return self.gen.next()
 
   def bits( self, howMany, info=None ):
     ret = 0
     for i in xrange(howMany):
-      ret = ret*2 + self.bit()
+      ret = ret*2 + self.gen.next()
+    self.index += howMany
     return ret
 
   def golomb( self, info=None ):
     zeros = 0
-    while self.bit() == 0:
+    while self.gen.next() == 0:
       zeros += 1
     ret = 0
     for i in xrange(zeros):
-      ret = 2*ret + self.bit()
+      ret = 2*ret + self.gen.next()
+    self.index += 2*zeros+1
     return 2**zeros + ret - 1
 
   def signedGolomb( self, info=None ):
@@ -58,10 +65,13 @@ class BitStream:
 
 
   def alignedByte( self ):
-    self.index = (self.index+7)&0xFFFFFFF8
-    ret = ord(self.buf[self.index/8])
-    self.index += 8
+    while self.index != (self.index+7)&0xFFFFFFF8:
+      self.bit()
+    ret = 0
+    for i in xrange(8):
+      ret = (ret << 1) + self.bit()
     return ret
+
 
   def tab( self, table, maxBits=32, info=None ):
     "ce(v): context-adaptive variable-length entropy-coded syntax element"

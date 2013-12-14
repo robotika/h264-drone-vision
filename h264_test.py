@@ -784,6 +784,17 @@ class H264Test( unittest.TestCase ):
     bs.bits(8) # flag set 012
     self.assertEqual( bs.bits(8), 31 ) # level
 
+  def testBitG( self ):
+    bs = BitStream( buf = "\xAF" )
+    self.assertEqual( bs.bitG().next(), 1 )
+    self.assertEqual( bs.bitG().next(), 1 )
+    gen = bs.bitG()
+    self.assertEqual( gen.next(), 1 )
+    self.assertEqual( gen.next(), 0 )
+    self.assertEqual( bs.gen.next(), 1 )
+    self.assertEqual( bs.gen.next(), 0 )
+
+
 if __name__ == "__main__":
   setVerbose( False )
   unittest.main() 
