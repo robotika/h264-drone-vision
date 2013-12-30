@@ -1,6 +1,8 @@
 #!/usr/bin/python
 """
   Navigation from macroblock motion vectors in H.264 codec
+  usage:
+     ./h264nav.py <testFrame>
 """
 
 THRESHOLD = 100 #50
@@ -99,4 +101,14 @@ def quadrantMotion( mv ):
             down += 1
   return left, right, up, down # TODO revise to LT,RT,LB,RB quadrants
 
+if __name__ == "__main__":
+  import sys
+  from h264 import parseFrame, setVerbose
+  if len(sys.argv) < 2:
+    print __doc__
+    sys.exit(2)
+  setVerbose( False )
+  filename = sys.argv[1]
+  mv = parseFrame( open( filename, "rb" ).read() )
+  print quadrantMotion( mv )
 
