@@ -8,6 +8,8 @@ import sys
 def generator( filename ):
   prev = 0
   for line in open( filename ):
+    if "Frame" in line:
+      continue
     x,y,mx,my = [int(i) for i in line.split()]
     seek = x+y*80
     if seek < prev:
