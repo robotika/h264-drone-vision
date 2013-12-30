@@ -15,6 +15,7 @@ from pygame.locals import *
 
 LOW_THRESHOLD = 10
 
+NUM_MERGE = 1 # 3 # number of motion pictures to merge
 
 def zeroPic():
   return absPic([])
@@ -93,7 +94,7 @@ def pygameTest( picGen, filename=None ):
     shift = averageShift( pic )
     pic = subShift( pic, shift )
     coefs = estMovement( pic )
-    print index/3, coefs[0][0], coefs[1][0]
+    print index/NUM_MERGE, coefs[0][0], coefs[1][0]
     pic = compensateMovement( pic, coefs )
     count = 0
     left,right,up,down = 0,0,0,0 # obstacle at
@@ -119,10 +120,11 @@ def pygameTest( picGen, filename=None ):
 #          pygame.draw.circle( foreground, (255,0,0), scr(x-mx/64,y-my/64), 3 )
           pygame.draw.line( foreground, (255,255,0), scr(x,y), scr(x+mx/64.0,y+my/64.0),2) 
 #          pygame.draw.line( foreground, (255,255,0), scr(x,y), scr(x-mx/64.0,y-my/64.0),2) 
-    
+   
+    print "QUEUE", (left, right, up, down)
     drawArrows( foreground, left, right, up, down )
 
-    pygame.display.set_caption("Index: %d, (%d,%d) - %d" % (index/3, shift[0], shift[1], count) ) 
+    pygame.display.set_caption("Index: %d, (%d,%d) - %d" % (index/NUM_MERGE, shift[0], shift[1], count) ) 
     if pygame.event.peek([QUIT,KEYDOWN]):
       event = pygame.event.wait()
       while event.type != KEYDOWN:
@@ -142,7 +144,7 @@ def pygameTest( picGen, filename=None ):
         if event.key in (K_ESCAPE,K_q):
           break
 
-    filename = "pic/xtest_%04d.jpg" % (index/3)
+    filename = "pic/xtest_%04d.jpg" % (index/NUM_MERGE)
     if filename:
       pygame.image.save( foreground, filename )
     screen.blit(background, (0, 0)) 
@@ -150,11 +152,11 @@ def pygameTest( picGen, filename=None ):
     pygame.display.flip()
     pygame.time.wait(1)
 
-def gen3pic( filename ):
+def genNpic( filename, num ):
   pic = zeroPic()
   for picList,index in izip(pictureOffsetG(filename), xrange(1000)):
     pic = addPic( pic, absPic( picList ) )
-    if index % 3 == 2:
+    if index % num == num-1:
       yield pic, index
       pic = zeroPic()
 
@@ -164,7 +166,7 @@ if __name__ == "__main__":
     sys.exit(2)
 
   filename = sys.argv[1]
-  pygameTest( gen3pic(filename) )
+  pygameTest( genNpic(filename, NUM_MERGE) )
 #      pygameTest( pic, "pic/test_%04d.png" % index )
 #      printDict( histogram( pic ) )
 
