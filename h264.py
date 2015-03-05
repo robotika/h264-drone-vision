@@ -195,43 +195,67 @@ def parseISlice( bs ):
 
 
 def parseSPS( bs ):
-  sps = [bs.alignedByte() for i in xrange(9)]
-  assert sps == [ 0x42, 0x80, 0x1f, 0x8b, 0x68, 0x5, 0x0, 0x5b, 0x10], sps
-  return
+  global WIDTH
+  global HEIGHT
 
   # 7.3.2.1, page 49
-  profileIdc = bs.bits(8)
+  profileIdc = bs.bits(8, "profile_idc")
   flagsSet012 = bs.bits(8)
-  level = bs.bits(8)
-  print "profil, level", profileIdc, level
-
-#seq parameter set id: 0
-#log2_max_frame_num_minus4: 10
-#pic_order_cnt_type: 2
+  level = bs.bits(8, "level_idc")
   seqParameterSetId = bs.golomb()
   log2_max_frame_num_minus4 = bs.golomb()
   pic_order_cnt_type = bs.golomb()
   assert pic_order_cnt_type == 2 # i.e. not necessary to handle ordering
-  numFrames = bs.golomb()
-  print "numFrames", numFrames
+  numFrames = bs.golomb("num_ref_frames")
   gaps_in_frame_num_value_allowed_flag = bs.bit()
-  picWidthInMbs = bs.golomb()
+  picWidthInMbs = bs.golomb("pic_width_in_mbs_minus1")
   picWidthInMbs += 1
-  print "picWidthInMbs", picWidthInMbs, picWidthInMbs*16
-  picHeightInMbs = bs.golomb()
+  if WIDTH != picWidthInMbs:
+    print "picWidthInMbs", picWidthInMbs, picWidthInMbs*16
+    WIDTH = picWidthInMbs
+  picHeightInMbs = bs.golomb("pic_height_in_map_units_minus1")
   picHeightInMbs += 1
-  print "picHeightInMbs", picHeightInMbs, picHeightInMbs*16
-  frameMbsOnlyFlag = bs.bit()
-  print "frameMbsOnlyFlag", frameMbsOnlyFlag
+  if HEIGHT != picHeightInMbs:
+    print "picHeightInMbs", picHeightInMbs, picHeightInMbs*16
+    HEIGHT = picHeightInMbs
+  frameMbsOnlyFlag = bs.bit("frameMbsOnlyFlag")
   assert frameMbsOnlyFlag # if not needs to get adaptive flag
-#    mbAdaptiveFrameFlag, it = bits( it, 1 )
   direct_8x8_inference_flag = bs.bit()
-  frame_cropping_flag = bs.bit()
-  print "frame_cropping_flag", frame_cropping_flag
-  assert frame_cropping_flag == 0 # otherwise read cropping
-  vui_parameters_present_flag = bs.bit()
-  print "vui_parameters_present_flag", vui_parameters_present_flag
-  assert vui_parameters_present_flag == 0
+  frame_cropping_flag = bs.bit("frame_cropping_flag")
+  if frame_cropping_flag:
+    bs.golomb("frame_crop_left_offset")
+    bs.golomb("frame_crop_right_offset")
+    bs.golomb("frame_crop_top_offset")
+    bs.golomb("frame_crop_bottom_offset")
+  vui_parameters_present_flag = bs.bit("vui_parameters_present_flag")
+  if vui_parameters_present_flag:
+    aspect_ratio_info_present_flag = bs.bit()
+    assert aspect_ratio_info_present_flag == 0
+    overscan_info_present_flag = bs.bit()
+    assert overscan_info_present_flag == 0
+    video_signal_type_present_flag = bs.bit()
+    assert video_signal_type_present_flag == 0
+    chroma_loc_info_present_flag = bs.bit()
+    assert chroma_loc_info_present_flag == 0
+    timing_info_present_flag = bs.bit()
+    if timing_info_present_flag:
+      num_units_in_tick = bs.bits(32)
+      time_scale = bs.bits(32)
+      fixed_frame_rate_flag = bs.bit(1)
+    nal_hrd_parameters_present_flag = bs.bit()
+    assert nal_hrd_parameters_present_flag == 0
+    vcl_hrd_parameters_present_flag = bs.bit()
+    assert vcl_hrd_parameters_present_flag == 0
+    pic_struct_present_flag = bs.bit()
+    bitstream_restriction_flag = bs.bit()
+    if bitstream_restriction_flag:
+      motion_vectors_over_pic_boundaries_flag = bs.bit()
+      max_bytes_per_pic_denom = bs.golomb()
+      max_bits_per_mb_denom = bs.golomb()
+      log2_max_mv_length_horizontal = bs.golomb()
+      log2_max_mv_length_vertical = bs.golomb()
+      num_reorder_frames = bs.golomb()
+      max_dec_frame_buffering = bs.golomb()
 
 def parsePPS( bs ):
   pps = [bs.alignedByte() for i in xrange(5)]
@@ -536,10 +560,15 @@ def parseFrameInner( buf ):
   if verbose:
     bs = VerboseWrapper( bs )
   if [bs.alignedByte() for i in [0,1,2,3]] != NAL_HEADER:
-    print "HEADER"
+    print "Missing HEADER"
     return None
   c = bs.alignedByte()
   if c & 0x1F != 1:
+    if verbose:
+      print "Frame type", hex(c)    
+    # 7 = sequence parameter set (SPS) - necessary to define number of macroblocks
+    if c & 0x1F == 7:
+        parseSPS( bs )
     return []
   ret = parsePSlice( bs, None )
   if verbose:
