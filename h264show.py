@@ -13,14 +13,53 @@ import numpy as np
 
 # where to move this?!
 sys.path.append( "../heidi" ) 
-from pave import PaVE, isIFrame, frameEncodedWidth, frameEncodedHeight
+#from pave import PaVE, isIFrame, frameEncodedWidth, frameEncodedHeight
 
-def h264show( filename ):
+# fake PaVE
+class PaVE:
+  def __init__( self ):
+    self.buf = ""
+
+  def append( self, data ):
+    self.buf += data
+
+  def extract( self ):
+    if len(self.buf) < 5:
+      return "", ""
+    assert self.buf[:4] == "\0\0\0\x01", [hex(ord(x)) for x in self.buf[:4]]
+    frameType = 0x1F & ord(self.buf[4])
+    for i in xrange(1, len(self.buf)-4):
+      if self.buf[i:i+4] == "\0\0\0\x01": # ignoring escape char for a moment
+        print hex(ord(self.buf[i+4]))        
+        if frameType in [1, 5]:
+          break
+        frameType = 0x1F & ord(self.buf[i+4])
+    else:
+      return "", ""
+    ret = self.buf[:i]
+    sys.stderr.write( "%d\n" % len(ret) )
+    self.buf = self.buf[i:]
+    return (640, 368, 1), ret # HACK, parseSPS required
+
+
+def frameEncodedWidth(header):
+  return header[0]
+
+def frameEncodedHeight(header):
+  return header[1]
+
+def isIFrame(header):
+  return header[2]
+
+
+
+def h264show( filenames ):
   print cvideo.init()
   img = np.zeros([720,1280,3], dtype=np.uint8)
   missingIFrame = True
   pave = PaVE()
-  pave.append( open( filename, "rb" ).read() )
+  for filename in filenames:
+    pave.append( open( filename, "rb" ).read() )
   header,payload = pave.extract()
   while len(header) > 0:
     w,h = frameEncodedWidth(header), frameEncodedHeight(header)
@@ -44,6 +83,6 @@ if __name__ == "__main__":
     print __doc__
     sys.exit(2)
   setVerbose( False )
-  filename = sys.argv[1]
-  h264show( filename )
+  filenames = sys.argv[1:]
+  h264show( filenames )
 

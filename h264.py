@@ -19,6 +19,7 @@ PAVE_HEADER = [ord(x) for x in "PaVE"]
 
 WIDTH = 80 # for the first experiments hard-coded (otherwise available in SPS)
 HEIGHT = 45
+LOG2_MAX_FRAME_NUM = 14
 
 from bittables import coefTokenMapping01, coefTokenMapping23, coefTokenMapping4567, coefTokenMapping8andUp, coefTokenMappingOther
 from bittables import levelMapping, runBeforeMapping, totalZerosMappingDC, totalZerosMapping
@@ -123,7 +124,7 @@ class BitStream:
           assert False, str(automat) # not supported
 
 class VerboseWrapper:
-  def __init__( self, worker, startOffset=3571530-77 ):
+  def __init__( self, worker, startOffset=4712452-81):
     self.worker = worker
     self.startOffset = startOffset
 
@@ -197,13 +198,14 @@ def parseISlice( bs ):
 def parseSPS( bs ):
   global WIDTH
   global HEIGHT
+  global LOG2_MAX_FRAME_NUM
 
   # 7.3.2.1, page 49
   profileIdc = bs.bits(8, "profile_idc")
   flagsSet012 = bs.bits(8)
   level = bs.bits(8, "level_idc")
   seqParameterSetId = bs.golomb()
-  log2_max_frame_num_minus4 = bs.golomb()
+  LOG2_MAX_FRAME_NUM = bs.golomb("log2_max_frame_num_minus4") + 4
   pic_order_cnt_type = bs.golomb()
   assert pic_order_cnt_type == 2 # i.e. not necessary to handle ordering
   numFrames = bs.golomb("num_ref_frames")
@@ -357,7 +359,7 @@ def macroblockLayer( bs, left, up ):
   # mb_pred( mb_type )
 #  print "  ref_idx_l0", bs.golomb()  # MbPartPredMode( mb_type, mbPartIdx ) != Pred_L1
 #  print "  ref_idx_l1", bs.golomb()
-  if mbType > 0:
+  if mbType > 5:
     mvdL0 = None # not defined, ignore previous predictions
     mvdL1 = None
     cbp = bs.golomb( "intra_chroma_pred_mode" ) # page 94
@@ -378,9 +380,53 @@ def macroblockLayer( bs, left, up ):
       bitPattern = 0x1F
     if mbType in [26, 27, 28, 29]: # frame 137, did not expect this type
       bitPattern = 0x2F
-  else: # 0
-    mvdL0 = bs.signedGolomb( "  mvd_l0" )
-    mvdL1 = bs.signedGolomb( "  mvd_l1" )
+  elif mbType == 5:
+    # Intra_4x4
+    mvdL0 = 0 # TODO
+    mvdL1 = 0
+    for i in xrange(16):
+      if bs.bit("intra4x4_pred_mode") == 0:
+        bs.bits(3) # probably table??
+    bs.golomb("intra_chroma_pred_mode") # guess
+    cbp = bs.golomb( "CBP  coded_block_pattern" )
+    cbpInter = [47,31,15,0,23,27,29,30,7,11,13,14,
+        39,43,45,46,16,3,5,10,12,19,21,26,28,35,37,42,44,
+        1,2,4,8,17,18,20,24,6,9,22,25,
+        32,33,34,36,40,38,41]
+    bitPattern = cbpInter[ cbp ]
+    if bitPattern > 0:
+      bs.golomb( "mb_qp_delta" )
+
+  else: # 0..3
+    if mbType == 0: # P_L0_16x16
+      mvdL0 = bs.signedGolomb( "  mvd_l0" )
+      mvdL1 = bs.signedGolomb( "  mvd_l1" )
+    elif mbType == 1: # P_L0_L0_16x8
+      mvdL0 = 0 # TODO
+      mvdL1 = 0
+      for i in xrange(4):
+        mvd_l0 = bs.golomb("mvd_l0") # TODO use mvd_l0
+    elif mbType == 2: # P_L0_L0_8x16 ... not available on ARDrone2
+      mvdL0 = 0 # TODO
+      mvdL1 = 0
+      for i in xrange(4):
+        mvd_l0 = bs.golomb("mvd_l0") # TODO use mvd_l0
+    elif mbType == 3: # P_8x8 ... not available on ARDrone2
+      mvdL0 = 0 # TODO
+      mvdL1 = 0
+      numSubMbPart = 0
+      for i in xrange(4):
+        sub_mb_type = bs.golomb("sub_mb_type")
+        assert sub_mb_type in [0,1,2], sub_mb_type
+        if sub_mb_type == 0:
+          numSubMbPart += 1
+        elif sub_mb_type == 1 or sub_mb_type == 2:
+          numSubMbPart += 2
+      for i in xrange( 2*numSubMbPart ):
+        mvd_l0 = bs.golomb("mvd_l0") # TODO use mvd_l0
+    else:
+      assert mbType == 4
+      assert False
     cbp = bs.golomb( "CBP  coded_block_pattern" )
     # TODO use conversion table, page 174, column Inter
     cbpInter = [ 0, 16, 1, 2, 4, 8, 32, 3, 5, 10,  # 0-9
@@ -464,10 +510,11 @@ def parsePSlice( bs, fout ):
   bs.golomb( "first_mb_in_slice" )
   bs.golomb( "slice_type" )
   bs.golomb( "pic_parameter_set_id" )
-  bs.bits( 14, info="frame_num" ) # HACK! should use parameter from SPS
+  bs.bits( LOG2_MAX_FRAME_NUM, info="frame_num" )
 # redundant_pic_cnt_present_flag: 0 (PPS)
-  bs.bit( "num_ref_idx_active_override_flag" )
-  bs.golomb( "h->ref_count[0]" )
+  num_ref_idx_active_override_flag = bs.bit( "num_ref_idx_active_override_flag" )
+  if num_ref_idx_active_override_flag:
+    bs.golomb( "h->ref_count[0]" )
   bs.bit( "ref_pic_list_reordering_flag_l0" )
 # weighted_pred_flag: 0
 # nal_ref_idc = 3
@@ -578,7 +625,7 @@ def parseFrameInner( buf ):
   if index/8 == len(buf) or index/8+1 == len(buf):
     # it is not clear how the end bytes are aligned :(
     return ret
-  print bs.index/8, len(buf),  bs.index % 8
+  print index/8, len(buf),  index % 8
   return None
 
 def parseFrame( buf ):
