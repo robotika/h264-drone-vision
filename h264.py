@@ -13,6 +13,8 @@ def setVerbose( val ):
   global verbose
   verbose = val
 
+global fout
+
 #NAL_HEADER = "".join([chr(x) for x in [0,0,0,1]])
 NAL_HEADER = [0,0,0,1]
 PAVE_HEADER = [ord(x) for x in "PaVE"]
@@ -124,7 +126,7 @@ class BitStream:
           assert False, str(automat) # not supported
 
 class VerboseWrapper:
-  def __init__( self, worker, startOffset=4712452-81):
+  def __init__( self, worker, startOffset=4712452-81+450548-5163050):
     self.worker = worker
     self.startOffset = startOffset
 
@@ -261,7 +263,7 @@ def parseSPS( bs ):
 
 def parsePPS( bs ):
   pps = [bs.alignedByte() for i in xrange(5)]
-  assert pps == [0xce, 0x1, 0xa8, 0x77, 0x20], pps
+#  assert pps == [0xce, 0x1, 0xa8, 0x77, 0x20], pps
 
 def residual( bs, nC ):
   "read residual block/data"
@@ -402,16 +404,23 @@ def macroblockLayer( bs, left, up ):
       mvdL0 = bs.signedGolomb( "  mvd_l0" )
       mvdL1 = bs.signedGolomb( "  mvd_l1" )
     elif mbType == 1: # P_L0_L0_16x8
+      s = "P_L0_L0_16x8"
       mvdL0 = 0 # TODO
       mvdL1 = 0
       for i in xrange(4):
-        mvd_l0 = bs.golomb("mvd_l0") # TODO use mvd_l0
+        mvd_l0 = bs.signedGolomb("mvd_l0") # TODO use mvd_l0
+        s += ' ' + str(mvd_l0)
+      fout.write(s+'\n')
     elif mbType == 2: # P_L0_L0_8x16 ... not available on ARDrone2
+      s = "P_L0_L0_8x16"
       mvdL0 = 0 # TODO
       mvdL1 = 0
       for i in xrange(4):
-        mvd_l0 = bs.golomb("mvd_l0") # TODO use mvd_l0
+        mvd_l0 = bs.signedGolomb("mvd_l0") # TODO use mvd_l0
+        s += ' ' + str(mvd_l0)
+      fout.write(s+'\n')
     elif mbType == 3: # P_8x8 ... not available on ARDrone2
+      s = "P_8x8"
       mvdL0 = 0 # TODO
       mvdL1 = 0
       numSubMbPart = 0
@@ -423,7 +432,9 @@ def macroblockLayer( bs, left, up ):
         elif sub_mb_type == 1 or sub_mb_type == 2:
           numSubMbPart += 2
       for i in xrange( 2*numSubMbPart ):
-        mvd_l0 = bs.golomb("mvd_l0") # TODO use mvd_l0
+        mvd_l0 = bs.signedGolomb("mvd_l0") # TODO use mvd_l0
+        s += ' ' + str(mvd_l0)
+      fout.write(s+'\n')
     else:
       assert mbType == 4
       assert False
@@ -647,6 +658,7 @@ def parseFramesOld( filename ):
   if verbose:
     bs = VerboseWrapper( bs )
   frameIndex = 0
+  global fout
   fout = open("mv_out.txt", "w")
   header = [None, None, None, None]
   while True:  
@@ -658,7 +670,7 @@ def parseFramesOld( filename ):
       print hex(c)
       if c & 0x1F == 1:
 #        try:
-          fout.write( "Frame %d\n" % frameIndex )
+#          fout.write( "Frame %d\n" % frameIndex )
           print "Frame %d\n" % frameIndex
           parsePSlice( bs, fout )
           frameIndex += 1
@@ -716,5 +728,5 @@ if __name__ == "__main__":
   else:
     for filename in sys.argv[1:]:
       if filename != '-v':     
-        parseFrames( filename )
+        parseFramesOld( filename )
 
